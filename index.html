@@ -2,120 +2,191 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>周末小厨 V4.0 (Pro)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>周末小厨 V5 (旗舰版) 🥘</title>
     <style>
         :root {
-            --primary: #ff7675;
-            --secondary: #55efc4;
+            --primary: #ff6b6b;
+            --secondary: #4ecdc4;
             --dark: #2d3436;
-            --light: #f7f9fc;
-            --gray: #b2bec3;
+            --bg: #f7f9fc;
+            --white: #ffffff;
+            --easy: #2ecc71;  /* 绿色-快手 */
+            --norm: #f1c40f;  /* 黄色-家常 */
+            --hard: #e74c3c;  /* 红色-大菜 */
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--light);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
             color: var(--dark);
-            max-width: 650px;
+            max-width: 600px;
             margin: 0 auto;
             padding: 15px;
-            padding-bottom: 80px;
+            padding-bottom: 100px; /* 底部留白 */
         }
 
-        h1 { text-align: center; color: var(--primary); margin: 10px 0 5px 0; }
-        .subtitle { text-align: center; color: #888; font-size: 13px; margin-bottom: 20px; }
+        /* 标题栏 */
+        header { text-align: center; margin-bottom: 20px; }
+        h1 { color: var(--primary); margin: 0; font-size: 24px; }
+        .subtitle { font-size: 12px; color: #999; margin-top: 5px; }
 
-        /* 通用组件 */
-        button { border: none; cursor: pointer; transition: 0.2s; font-weight: bold; border-radius: 8px; }
-        button:active { transform: scale(0.96); opacity: 0.8; }
-        input, select { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        /* 通用按钮 */
+        button { border: none; cursor: pointer; border-radius: 8px; font-weight: 600; transition: 0.1s; outline: none; }
+        button:active { transform: scale(0.96); opacity: 0.9; }
+        .btn-main { width: 100%; background: var(--primary); color: white; padding: 14px; font-size: 16px; box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3); }
+        .btn-ghost { background: transparent; border: 1px solid #ddd; color: #666; padding: 6px 12px; font-size: 13px; border-radius: 20px; }
+        .btn-icon { background: #f1f2f6; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #555; }
+        
+        /* 卡片容器 */
+        .card { background: var(--white); padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 15px; }
 
-        .btn-main { width: 100%; background: var(--primary); color: white; padding: 14px; font-size: 16px; box-shadow: 0 4px 10px rgba(255, 118, 117, 0.3); }
-        .btn-sec { background: white; border: 1px solid #ddd; color: #666; padding: 6px 12px; font-size: 13px; border-radius: 20px; }
-        .btn-icon { background: none; padding: 4px; font-size: 16px; color: #999; }
-        .btn-link { color: #0984e3; text-decoration: none; cursor: pointer; font-size: 14px; }
-
-        /* 面板容器 */
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 15px; }
-
-        /* 星期选择 */
+        /* 星期选择器 */
         .days-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
-        .day-opt { background: #f1f2f6; padding: 8px; border-radius: 6px; text-align: center; font-size: 13px; cursor: pointer; border: 2px solid transparent; }
-        .day-opt.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        .day-opt { background: #f1f2f6; padding: 10px 0; border-radius: 8px; text-align: center; font-size: 14px; cursor: pointer; border: 2px solid transparent; user-select: none; }
+        .day-opt.selected { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 5px rgba(255,107,107,0.3); }
 
         /* 菜单展示 */
-        .menu-day { border-left: 5px solid var(--secondary); padding-left: 12px; margin-bottom: 15px; background: white; padding: 10px; border-radius: 0 8px 8px 0; }
-        .day-title { font-weight: 800; color: #2d3436; margin-bottom: 8px; display: flex; justify-content: space-between; }
-        .dish-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #eee; }
+        .menu-day { border-left: 5px solid var(--secondary); padding-left: 12px; margin-bottom: 15px; background: white; padding: 12px; border-radius: 0 12px 12px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+        .day-header { font-weight: 800; font-size: 18px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .dish-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; }
         .dish-row:last-child { border: none; }
         
-        .tag { font-size: 10px; padding: 2px 5px; border-radius: 4px; margin-right: 5px; color: white; font-weight: normal; }
-        .t-meat { background: #ff7675; }
-        .t-veg { background: #00b894; }
-        .t-soup { background: #74b9ff; }
+        /* 标签体系 */
+        .tags-row { display: flex; gap: 4px; align-items: center; margin-right: 6px; }
+        .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; white-space: nowrap; }
+        .b-meat { background: #ff9f43; }
+        .b-veg { background: #2ecc71; }
+        .b-soup { background: #54a0ff; }
+        .b-out { background: #a29bfe; }
+        
+        /* 难度圆点 */
+        .diff-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        .d-easy { background: var(--easy); }
+        .d-norm { background: var(--norm); }
+        .d-hard { background: var(--hard); }
 
-        /* 菜谱管理器列表 */
-        .manager-list { max-height: 400px; overflow-y: auto; }
-        .manager-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
-        .manager-actions { display: flex; gap: 8px; }
+        /* 底部导航 */
+        .bottom-bar { display: flex; gap: 10px; overflow-x: auto; padding: 5px 0; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+        .bottom-bar button { flex: 1; white-space: nowrap; }
 
-        /* 弹窗 */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; }
-        .modal-body { background: white; width: 90%; max-width: 450px; padding: 20px; border-radius: 12px; max-height: 80vh; overflow-y: auto; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: bold; font-size: 18px; }
+        /* 弹窗通用 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-body { background: white; width: 85%; max-width: 400px; padding: 20px; border-radius: 16px; max-height: 80vh; overflow-y: auto; animation: popUp 0.2s ease-out; display: flex; flex-direction: column; }
+        @keyframes popUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; }
+        .modal-close { cursor: pointer; color: #999; }
+        
+        /* 操作菜单列表 */
+        .action-list button { width: 100%; text-align: left; padding: 12px; background: #f8f9fa; margin-bottom: 8px; border-radius: 8px; display: flex; align-items: center; gap: 10px; }
+        .action-list button:hover { background: #e9ecef; }
+        
+        /* 选菜列表 */
+        .select-list { margin-top: 10px; }
+        .select-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .select-item:active { background: #f0f0f0; }
 
-        /* 底部操作栏 */
-        .bottom-bar { display: flex; justify-content: space-between; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px; }
+        /* 输入框 */
+        input, select { width: 100%; padding: 12px; margin: 5px 0 15px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
 
-        .empty-tip { text-align: center; color: #bbb; font-size: 12px; padding: 20px; }
+        /* 专注模式 */
+        #focusMode { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 2000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        .focus-card { border: 2px solid var(--primary); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
 
-    <h1>🥘 周末小厨 V4</h1>
-    <div class="subtitle">去重算法 / 单菜更换 / 菜谱库管理</div>
+    <header>
+        <h1>🥘 周末小厨 V5</h1>
+        <div class="subtitle">智能生成 | 手动精选 | 难度分级</div>
+    </header>
 
-    <!-- 1. 配置区域 -->
+    <!-- 1. 选日期 -->
     <div class="card">
-        <b>1. 选日子</b>
+        <div style="font-weight:bold; margin-bottom:8px;">📅 选择做饭日期</div>
         <div class="days-grid" id="daysGrid"></div>
-        <div style="margin-top:10px; display:flex; gap:15px; font-size:14px;">
-            <label><input type="checkbox" id="optSoup"> 配汤</label>
-            <label><input type="checkbox" id="optOut"> 允许外卖</label>
+        <div style="margin-top:15px; display:flex; align-items:center;">
+            <label style="display:flex; align-items:center; gap:5px; font-size:14px; color:#555;">
+                <input type="checkbox" id="optSoup" style="width:auto; margin:0;"> 🍲 每餐配汤
+            </label>
         </div>
     </div>
 
-    <button class="btn-main" onclick="generateMenu()">🎲 生成不重复菜单</button>
+    <button class="btn-main" onclick="generateMenu()">🎲 生成完美菜单</button>
 
-    <!-- 2. 结果区域 -->
+    <!-- 2. 菜单列表 -->
     <div id="resultArea" style="margin-top: 20px;">
-        <div class="empty-tip">👈 点按钮生成下周吃啥</div>
+        <div style="text-align:center; color:#ccc; padding:30px;">
+            👇 点击按钮，开始规划下周美食
+        </div>
     </div>
 
-    <!-- 3. 购物清单 -->
-    <div class="card" id="shopCard" style="display:none; background:#fff3cd;">
-        <h3 style="margin:0 0 10px 0; color:#d35400;">🛒 采购清单</h3>
-        <div id="shopList" style="column-count:2; font-size:14px; line-height:1.6;"></div>
-        <button class="btn-sec" style="width:100%; margin-top:10px; border:none; background:rgba(255,255,255,0.5);" onclick="copyShop()">📄 复制清单</button>
+    <!-- 3. 购物清单 (自动显示) -->
+    <div class="card" id="shopCard" style="display:none; background:#fff8e1;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="margin:0; color:#d35400;">🛒 采购清单</h3>
+            <button class="btn-ghost" onclick="copyShop()">📋 复制</button>
+        </div>
+        <div id="shopList" style="column-count:2; font-size:14px; line-height:1.8;"></div>
     </div>
 
-    <!-- 4. 底部功能栏 -->
+    <!-- 4. 底部功能 -->
     <div class="bottom-bar">
-        <button class="btn-sec" onclick="openManager()">📚 菜谱管理 (全)</button>
-        <button class="btn-sec" onclick="openImportExport()">☁️ 数据同步</button>
-        <button class="btn-sec" onclick="clearAll()">🗑️ 重置</button>
+        <button class="btn-ghost" onclick="openFocusMode()">👨‍🍳 专注烹饪</button>
+        <button class="btn-ghost" onclick="openManager()">📚 菜谱库</button>
+        <button class="btn-ghost" onclick="openSync()">☁️ 同步</button>
+        <button class="btn-ghost" style="color:#ff6b6b;" onclick="clearAll()">🗑️ 清空</button>
     </div>
 
-    <!-- === 弹窗：菜谱管理器 === -->
-    <div id="modalManager" class="modal">
+    <!-- === 弹窗：单菜操作菜单 === -->
+    <div id="modalAction" class="modal">
         <div class="modal-body">
             <div class="modal-header">
-                <span>📚 菜谱库 (<span id="totalCount">0</span>)</span>
-                <span onclick="closeModal('modalManager')" style="cursor:pointer;">✕</span>
+                <span>🍽️ 调整这道菜</span>
+                <span class="modal-close" onclick="closeModal('modalAction')">✕</span>
             </div>
-            <input type="text" id="searchBox" placeholder="🔍 搜菜名..." oninput="renderManagerList()">
-            <button class="btn-main" style="padding:8px; margin-bottom:10px;" onclick="openEditor()">➕ 添加新菜</button>
-            <div class="manager-list" id="managerList"></div>
+            <div class="action-list">
+                <button onclick="doReroll()">
+                    <span>🎲</span> 随机换一道 (同类)
+                </button>
+                <button onclick="openManualSelect()">
+                    <span>👆</span> 手动选择 (从菜谱库)
+                </button>
+                <button onclick="doSetTakeout()">
+                    <span>🛵</span> 改为外卖/出去吃
+                </button>
+                <button onclick="openEditorFromMenu()">
+                    <span>🖊️</span> 编辑这道菜 (链接/难度)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- === 弹窗：手动选菜 === -->
+    <div id="modalSelect" class="modal">
+        <div class="modal-body" style="height:70vh;">
+            <div class="modal-header">
+                <span>👆 选择菜品</span>
+                <span class="modal-close" onclick="closeModal('modalSelect')">✕</span>
+            </div>
+            <input type="text" id="selectSearch" placeholder="🔍 搜索菜名..." oninput="renderSelectableList()">
+            <div class="select-list" id="selectableList"></div>
+        </div>
+    </div>
+
+    <!-- === 弹窗：菜谱库管理 === -->
+    <div id="modalManager" class="modal">
+        <div class="modal-body" style="height:70vh;">
+            <div class="modal-header">
+                <span>📚 菜谱库</span>
+                <span class="modal-close" onclick="closeModal('modalManager')">✕</span>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <input id="mgrSearch" placeholder="🔍 搜索..." oninput="renderManagerList()" style="margin-bottom:10px;">
+                <button class="btn-main" style="width:auto; padding:0 15px; height:46px; margin-top:5px;" onclick="openEditor()">➕</button>
+            </div>
+            <div id="managerList" class="select-list"></div>
         </div>
     </div>
 
@@ -123,307 +194,332 @@
     <div id="modalEditor" class="modal">
         <div class="modal-body">
             <div class="modal-header">
-                <span id="editorTitle">添加/编辑</span>
-                <span onclick="closeModal('modalEditor')" style="cursor:pointer;">✕</span>
+                <span id="editorTitle">📝 编辑菜谱</span>
+                <span class="modal-close" onclick="closeModal('modalEditor')">✕</span>
             </div>
-            <input type="hidden" id="editIndex"> <!-- 存储正在编辑的索引，-1为新增 -->
-            <label>菜名</label><input id="eName" placeholder="例如：宫保鸡丁">
+            <input type="hidden" id="editIdx">
+            <label>菜名</label><input id="eName" placeholder="例如：红烧排骨">
             <label>类型</label>
             <select id="eType">
                 <option value="meat">🍖 荤菜</option>
                 <option value="veg">🥬 素菜</option>
                 <option value="soup">🍲 汤/羹</option>
             </select>
-            <label>食材 (空格分隔)</label><input id="eIng" placeholder="鸡胸肉 花生 黄瓜">
-            <label>参考链接 (小红书/下厨房)</label><input id="eLink" placeholder="https://...">
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                <button class="btn-main" onclick="saveDish()">💾 保存</button>
-                <button class="btn-sec" style="flex:1;" onclick="closeModal('modalEditor')">取消</button>
-            </div>
+            <label>难度/耗时</label>
+            <select id="eDiff">
+                <option value="easy">⚡ 快手 (15分钟内)</option>
+                <option value="norm" selected>🍳 家常 (30分钟左右)</option>
+                <option value="hard">🔥 大菜 (耗时/复杂)</option>
+            </select>
+            <label>食材 (空格分隔)</label><input id="eIng" placeholder="排骨 姜 冰糖">
+            <label>做法链接 (小红书/下厨房)</label><input id="eLink" placeholder="http://...">
+            <button class="btn-main" onclick="saveDish()">保存</button>
         </div>
     </div>
 
-    <!-- === 弹窗：数据同步 === -->
-    <div id="modalSync" class="modal">
-        <div class="modal-body">
-            <div class="modal-header">
-                <span>☁️ 数据同步</span>
-                <span onclick="closeModal('modalSync')" style="cursor:pointer;">✕</span>
+    <!-- === 专注模式界面 === -->
+    <div id="focusMode">
+        <div style="max-width:600px; margin:0 auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+                <h2 style="margin:0;">👨‍🍳 正在烹饪</h2>
+                <button class="btn-ghost" onclick="document.getElementById('focusMode').style.display='none'">✕ 退出</button>
             </div>
-            <p style="font-size:12px; color:#666;">两人共享数据：一人导出发送代码，另一人粘贴导入。</p>
-            <textarea id="syncData" rows="6" style="width:100%; border:1px solid #ddd; border-radius:8px;"></textarea>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn-sec" style="flex:1;" onclick="doExport()">📤 复制导出</button>
-                <button class="btn-main" style="flex:1;" onclick="doImport()">📥 确认导入</button>
-            </div>
+            <div id="focusContent"></div>
         </div>
     </div>
 
 <script>
-    // --- 0. 扩充的基础菜谱库 (V4.0) ---
+    // --- V5.0 数据升级：增加了 diff (难度) 字段 ---
     const defaultDB = [
-        // 🍖 荤菜 (20+)
-        {name:"辣椒炒肉", type:"meat", ing:"五花肉 青椒 蒜", link:""},
-        {name:"红烧排骨", type:"meat", ing:"排骨 姜 冰糖", link:""},
-        {name:"可乐鸡翅", type:"meat", ing:"鸡翅中 可乐 姜", link:""},
-        {name:"鱼香肉丝", type:"meat", ing:"里脊肉 木耳 胡萝卜 笋", link:""},
-        {name:"宫保鸡丁", type:"meat", ing:"鸡胸肉 花生 黄瓜 干辣椒", link:""},
-        {name:"回锅肉", type:"meat", ing:"五花肉 蒜苗 豆瓣酱", link:""},
-        {name:"糖醋里脊", type:"meat", ing:"里脊肉 淀粉 番茄酱", link:""},
-        {name:"土豆炖牛腩", type:"meat", ing:"牛腩 土豆 洋葱", link:""},
-        {name:"香菇滑鸡", type:"meat", ing:"鸡腿肉 香菇 姜", link:""},
-        {name:"清蒸鲈鱼", type:"meat", ing:"鲈鱼 葱 姜", link:""},
-        {name:"红烧肉", type:"meat", ing:"五花肉 冰糖 八角", link:""},
-        {name:"蒜苔炒肉", type:"meat", ing:"瘦肉 蒜苔", link:""},
-        {name:"京酱肉丝", type:"meat", ing:"里脊肉 甜面酱 豆腐皮 葱丝", link:""},
-        {name:"肉末茄子", type:"meat", ing:"茄子 肉末 蒜", link:""},
-        {name:"黄焖鸡", type:"meat", ing:"鸡腿肉 青椒 土豆 香菇", link:""},
-        {name:"小炒黄牛肉", type:"meat", ing:"牛肉 芹菜 小米椒", link:""},
-        {name:"油焖大虾", type:"meat", ing:"虾 姜 葱", link:""},
-        {name:"啤酒鸭", type:"meat", ing:"鸭肉 啤酒 姜", link:""},
-        {name:"孜然羊肉", type:"meat", ing:"羊肉 孜然 洋葱", link:""},
+        // 🍖 荤菜
+        {name:"辣椒炒肉", type:"meat", diff:"norm", ing:"五花肉 青椒 蒜", link:""},
+        {name:"红烧排骨", type:"meat", diff:"hard", ing:"排骨 姜 冰糖", link:""},
+        {name:"可乐鸡翅", type:"meat", diff:"norm", ing:"鸡翅中 可乐 姜", link:""},
+        {name:"宫保鸡丁", type:"meat", diff:"norm", ing:"鸡胸肉 花生 黄瓜", link:""},
+        {name:"清蒸鲈鱼", type:"meat", diff:"easy", ing:"鲈鱼 葱 姜", link:""},
+        {name:"土豆炖牛腩", type:"meat", diff:"hard", ing:"牛腩 土豆 洋葱", link:""},
+        {name:"鱼香肉丝", type:"meat", diff:"hard", ing:"里脊肉 木耳 胡萝卜", link:""},
+        {name:"蒜苔炒肉", type:"meat", diff:"easy", ing:"瘦肉 蒜苔", link:""},
+        {name:"黄焖鸡", type:"meat", diff:"hard", ing:"鸡腿肉 青椒 香菇", link:""},
+        {name:"油焖大虾", type:"meat", diff:"easy", ing:"虾 姜 葱", link:""},
         
-        // 🥬 素菜 (15+)
-        {name:"酸辣土豆丝", type:"veg", ing:"土豆 干辣椒 醋", link:""},
-        {name:"西红柿炒鸡蛋", type:"veg", ing:"西红柿 鸡蛋 葱", link:""},
-        {name:"地三鲜", type:"veg", ing:"土豆 茄子 青椒", link:""},
-        {name:"手撕包菜", type:"veg", ing:"包菜 干辣椒 蒜", link:""},
-        {name:"蒜蓉油麦菜", type:"veg", ing:"油麦菜 蒜", link:""},
-        {name:"干煸四季豆", type:"veg", ing:"四季豆 花椒 蒜", link:""},
-        {name:"家常豆腐", type:"veg", ing:"老豆腐 木耳 青椒", link:""},
-        {name:"麻婆豆腐", type:"veg", ing:"豆腐 肉末 豆瓣酱 花椒", link:""},
-        {name:"蚝油生菜", type:"veg", ing:"生菜 蚝油 蒜", link:""},
-        {name:"清炒西兰花", type:"veg", ing:"西兰花 蒜", link:""},
-        {name:"凉拌黄瓜", type:"veg", ing:"黄瓜 蒜 醋 辣椒油", link:""},
-        {name:"韭菜炒鸡蛋", type:"veg", ing:"韭菜 鸡蛋", link:""},
-        {name:"虎皮青椒", type:"veg", ing:"青椒 蒜 醋", link:""},
-        {name:"香菇青菜", type:"veg", ing:"上海青 香菇", link:""},
-        {name:"素炒三丝", type:"veg", ing:"土豆 胡萝卜 青椒", link:""},
-
-        // 🍲 汤 (8+)
-        {name:"紫菜蛋花汤", type:"soup", ing:"紫菜 鸡蛋", link:""},
-        {name:"番茄蛋汤", type:"soup", ing:"西红柿 鸡蛋", link:""},
-        {name:"冬瓜排骨汤", type:"soup", ing:"冬瓜 排骨 姜", link:""},
-        {name:"玉米排骨汤", type:"soup", ing:"玉米 排骨 胡萝卜", link:""},
-        {name:"菌菇豆腐汤", type:"soup", ing:"金针菇 豆腐 鸡蛋", link:""},
-        {name:"鲫鱼豆腐汤", type:"soup", ing:"鲫鱼 豆腐 姜", link:""},
-        {name:"白菜豆腐汤", type:"soup", ing:"白菜 豆腐", link:""},
-        {name:"罗宋汤", type:"soup", ing:"牛肉 西红柿 洋葱 土豆", link:""}
+        // 🥬 素菜
+        {name:"酸辣土豆丝", type:"veg", diff:"norm", ing:"土豆 干辣椒 醋", link:""},
+        {name:"西红柿炒蛋", type:"veg", diff:"easy", ing:"西红柿 鸡蛋 葱", link:""},
+        {name:"蒜蓉油麦菜", type:"veg", diff:"easy", ing:"油麦菜 蒜", link:""},
+        {name:"手撕包菜", type:"veg", diff:"easy", ing:"包菜 干辣椒 蒜", link:""},
+        {name:"地三鲜", type:"veg", diff:"norm", ing:"土豆 茄子 青椒", link:""},
+        {name:"麻婆豆腐", type:"veg", diff:"norm", ing:"豆腐 肉末 豆瓣酱", link:""},
+        {name:"凉拌黄瓜", type:"veg", diff:"easy", ing:"黄瓜 蒜 醋", link:""},
+        {name:"韭菜炒鸡蛋", type:"veg", diff:"easy", ing:"韭菜 鸡蛋", link:""},
+        
+        // 🍲 汤
+        {name:"紫菜蛋花汤", type:"soup", diff:"easy", ing:"紫菜 鸡蛋", link:""},
+        {name:"冬瓜排骨汤", type:"soup", diff:"hard", ing:"排骨 冬瓜 姜", link:""},
+        {name:"番茄蛋汤", type:"soup", diff:"easy", ing:"西红柿 鸡蛋", link:""},
+        {name:"菌菇豆腐汤", type:"soup", diff:"easy", ing:"金针菇 豆腐", link:""}
     ];
 
-    // --- 全局变量 ---
-    let recipes = JSON.parse(localStorage.getItem('myRecipes_v4')) || defaultDB;
-    let currentMenu = JSON.parse(localStorage.getItem('currentMenu_v4')) || [];
+    // 全局状态
+    let recipes = JSON.parse(localStorage.getItem('myRecipes_v5')) || defaultDB;
+    // 兼容性检查：如果旧数据没有diff字段，默认给norm
+    recipes.forEach(r => { if(!r.diff) r.diff = 'norm'; });
+    
+    let currentMenu = JSON.parse(localStorage.getItem('currentMenu_v5')) || [];
     let selectedDays = [];
     const weekDays = ["周一","周二","周三","周四","周五","周六","周日"];
 
+    // 临时存储当前操作的菜
+    let activeDayIdx = -1;
+    let activeDishIdx = -1;
+
     // --- 初始化 ---
     function init() {
-        // 生成星期按钮
-        const dGrid = document.getElementById('daysGrid');
+        const grid = document.getElementById('daysGrid');
         weekDays.forEach(day => {
             let d = document.createElement('div');
             d.className = 'day-opt';
             d.innerText = day;
             d.onclick = () => {
-                d.classList.toggle('selected');
-                if(selectedDays.includes(day)) selectedDays = selectedDays.filter(x=>x!==day);
-                else selectedDays.push(day);
+                if(selectedDays.includes(day)) {
+                    selectedDays = selectedDays.filter(x=>x!==day);
+                    d.classList.remove('selected');
+                } else {
+                    selectedDays.push(day);
+                    d.classList.add('selected');
+                }
             };
-            dGrid.appendChild(d);
+            grid.appendChild(d);
         });
 
-        // 如果有缓存菜单，渲染出来
-        if(currentMenu.length > 0) renderResult();
+        if(currentMenu.length > 0) renderMenu();
     }
     init();
 
-    // --- 1. 核心：去重生成算法 ---
+    // --- 1. 生成菜单 ---
     function generateMenu() {
-        if(selectedDays.length === 0) return alert("请先选择日期 (如周六、周日)");
+        if(selectedDays.length === 0) return alert("请先选择日期");
         const needSoup = document.getElementById('optSoup').checked;
-        const allowOut = document.getElementById('optOut').checked;
-
-        // 准备池子 (深拷贝以免影响原数据)
-        let meatPool = recipes.filter(r=>r.type==='meat').sort(()=>Math.random()-0.5);
-        let vegPool = recipes.filter(r=>r.type==='veg').sort(()=>Math.random()-0.5);
-        let soupPool = recipes.filter(r=>r.type==='soup').sort(()=>Math.random()-0.5);
+        
+        // 创建随机池
+        let pool = {
+            meat: recipes.filter(r=>r.type==='meat').sort(()=>Math.random()-0.5),
+            veg: recipes.filter(r=>r.type==='veg').sort(()=>Math.random()-0.5),
+            soup: recipes.filter(r=>r.type==='soup').sort(()=>Math.random()-0.5)
+        };
 
         let newMenu = [];
-
         selectedDays.forEach(day => {
-            // 外卖判定 (10%概率)
-            if(allowOut && Math.random() < 0.1) {
-                newMenu.push({ day: day, isOut: true, dishes: [] });
-                return;
-            }
-
-            let dayDishes = [];
+            let dishes = [];
             
-            // 取荤菜 (如果池子空了，就从头再取一个，虽然重复但也没办法)
-            if(meatPool.length === 0) meatPool = recipes.filter(r=>r.type==='meat').sort(()=>Math.random()-0.5);
-            if(meatPool.length > 0) dayDishes.push(meatPool.pop());
+            // 辅助取菜函数
+            const pick = (type) => {
+                if(pool[type].length === 0) {
+                    // 池子空了重新洗牌（允许重复）
+                    pool[type] = recipes.filter(r=>r.type===type).sort(()=>Math.random()-0.5);
+                }
+                return pool[type].length ? pool[type].pop() : null;
+            };
 
-            // 取素菜
-            if(vegPool.length === 0) vegPool = recipes.filter(r=>r.type==='veg').sort(()=>Math.random()-0.5);
-            if(vegPool.length > 0) dayDishes.push(vegPool.pop());
+            let meat = pick('meat'); if(meat) dishes.push(meat);
+            let veg = pick('veg'); if(veg) dishes.push(veg);
+            if(needSoup) { let soup = pick('soup'); if(soup) dishes.push(soup); }
 
-            // 取汤
-            if(needSoup) {
-                if(soupPool.length === 0) soupPool = recipes.filter(r=>r.type==='soup').sort(()=>Math.random()-0.5);
-                if(soupPool.length > 0) dayDishes.push(soupPool.pop());
-            }
-
-            newMenu.push({ day: day, isOut: false, dishes: dayDishes });
+            newMenu.push({ day: day, dishes: dishes });
         });
 
         currentMenu = newMenu;
         saveAndRender();
     }
 
-    // --- 2. 渲染结果 & 单菜更换 ---
-    function renderResult() {
+    // --- 2. 渲染主界面 ---
+    function renderMenu() {
         const area = document.getElementById('resultArea');
         area.innerHTML = "";
         let allIng = {};
 
         if(currentMenu.length === 0) {
-            area.innerHTML = '<div class="empty-tip">👈 点按钮生成下周吃啥</div>';
+            area.innerHTML = '<div style="text-align:center;color:#bbb;padding:40px;">暂无菜单</div>';
             document.getElementById('shopCard').style.display = 'none';
             return;
         }
 
         currentMenu.forEach((item, dayIdx) => {
-            let html = `<div class="menu-day"><div class="day-title"><span>${item.day}</span></div>`;
+            let html = `<div class="menu-day"><div class="day-header">${item.day}</div>`;
             
-            if(item.isOut) {
-                html += `<div style="text-align:center; color:#a29bfe; padding:10px;">🛵 今天休息，点外卖/出去吃！</div>`;
-            } else {
-                item.dishes.forEach((dish, dishIdx) => {
-                    // 收集食材
-                    if(dish.ing) dish.ing.split(" ").forEach(k=> { if(k) allIng[k] = (allIng[k]||0)+1; });
+            item.dishes.forEach((dish, dishIdx) => {
+                // 收集食材
+                if(dish.ing && dish.name !== "外卖") {
+                    dish.ing.split(" ").forEach(k => { if(k) allIng[k] = (allIng[k]||0)+1; });
+                }
 
-                    // 渲染行
-                    let tagClass = dish.type==='meat'?'t-meat':(dish.type==='veg'?'t-veg':'t-soup');
-                    let tagName = dish.type==='meat'?'荤':(dish.type==='veg'?'素':'汤');
-                    let linkHtml = dish.link ? `<a href="${dish.link}" target="_blank" style="text-decoration:none;">🔗</a>` : '';
+                // 样式处理
+                let isOut = dish.name === "外卖";
+                let typeBadge = '';
+                if(isOut) typeBadge = `<span class="badge b-out">外卖</span>`;
+                else if(dish.type === 'meat') typeBadge = `<span class="badge b-meat">荤</span>`;
+                else if(dish.type === 'veg') typeBadge = `<span class="badge b-veg">素</span>`;
+                else typeBadge = `<span class="badge b-soup">汤</span>`;
 
-                    html += `
-                        <div class="dish-row">
-                            <div style="flex:1;">
-                                <span class="tag ${tagClass}">${tagName}</span>
-                                <b style="font-size:15px;">${dish.name}</b>
-                                ${linkHtml}
-                            </div>
-                            <button class="btn-icon" onclick="rerollDish(${dayIdx}, ${dishIdx})" title="换一道">🔄</button>
+                // 难度点
+                let diffDot = '';
+                if(!isOut && dish.diff) diffDot = `<span class="diff-dot d-${dish.diff}"></span>`;
+                
+                // 链接
+                let linkBtn = (!isOut && dish.link) ? `<a href="${dish.link}" target="_blank" style="text-decoration:none; margin-left:5px;">🔗</a>` : '';
+
+                html += `
+                    <div class="dish-row">
+                        <div style="flex:1; display:flex; align-items:center;">
+                            <div class="tags-row">${typeBadge}</div>
+                            ${diffDot}
+                            <span style="font-weight:500; ${isOut?'color:#999':''}">${dish.name}</span>
+                            ${linkBtn}
                         </div>
-                    `;
-                });
-            }
+                        <button class="btn-icon" onclick="openAction(${dayIdx}, ${dishIdx})">⚙️</button>
+                    </div>
+                `;
+            });
             html += `</div>`;
             area.innerHTML += html;
         });
 
         // 渲染购物清单
-        const shopList = document.getElementById('shopList');
-        shopList.innerHTML = "";
+        const sList = document.getElementById('shopList');
+        sList.innerHTML = "";
         if(Object.keys(allIng).length > 0) {
             document.getElementById('shopCard').style.display = 'block';
             for(let k in allIng) {
-                shopList.innerHTML += `<div>▫️ ${k} ${allIng[k]>1?'<small style="color:#999">x'+allIng[k]+'</small>':''}</div>`;
+                sList.innerHTML += `<div>▫️ ${k} ${allIng[k]>1 ? '<small style="color:#aaa">x'+allIng[k]+'</small>':''}</div>`;
             }
+        } else {
+            document.getElementById('shopCard').style.display = 'none';
         }
-    }
-
-    // 🔄 单菜更换功能
-    function rerollDish(dayIdx, dishIdx) {
-        let oldDish = currentMenu[dayIdx].dishes[dishIdx];
-        let type = oldDish.type;
-
-        // 1. 获取当前菜单里所有已经存在的菜名 (避免重复)
-        let existingNames = new Set();
-        currentMenu.forEach(d => {
-            if(!d.isOut) d.dishes.forEach(dd => existingNames.add(dd.name));
-        });
-
-        // 2. 从总库里找同类型的、且不在existingNames里的菜
-        let candidates = recipes.filter(r => r.type === type && !existingNames.has(r.name));
-
-        // 3. 如果候选池空了（说明所有菜都用光了），就放宽限制，允许重复，只排除自己
-        if(candidates.length === 0) {
-            candidates = recipes.filter(r => r.type === type && r.name !== oldDish.name);
-        }
-
-        if(candidates.length === 0) return alert("菜谱库里没有其他同类菜了！快去添加一点吧。");
-
-        // 4. 随机选一个
-        let newDish = candidates[Math.floor(Math.random() * candidates.length)];
-        currentMenu[dayIdx].dishes[dishIdx] = newDish;
-        
-        saveAndRender();
     }
 
     function saveAndRender() {
-        localStorage.setItem('currentMenu_v4', JSON.stringify(currentMenu));
-        renderResult();
+        localStorage.setItem('currentMenu_v5', JSON.stringify(currentMenu));
+        renderMenu();
     }
 
-    // --- 3. 菜谱管理器 (全览、搜索、编辑) ---
+    // --- 3. 交互逻辑 ---
+
+    // 打开操作菜单
+    function openAction(dayIdx, dishIdx) {
+        activeDayIdx = dayIdx;
+        activeDishIdx = dishIdx;
+        document.getElementById('modalAction').style.display = 'flex';
+    }
+
+    // 动作A: 随机换
+    function doReroll() {
+        let currentDish = currentMenu[activeDayIdx].dishes[activeDishIdx];
+        let type = currentDish.type || 'meat'; // 默认为荤，防止外卖换回来报错
+        
+        // 找同类候选
+        let candidates = recipes.filter(r => r.type === type && r.name !== currentDish.name);
+        if(candidates.length === 0) candidates = recipes.filter(r => r.type === type); // 实在没有就允许自己
+        
+        let newDish = candidates[Math.floor(Math.random() * candidates.length)];
+        currentMenu[activeDayIdx].dishes[activeDishIdx] = newDish;
+        
+        saveAndRender();
+        closeModal('modalAction');
+    }
+
+    // 动作B: 设为外卖
+    function doSetTakeout() {
+        currentMenu[activeDayIdx].dishes[activeDishIdx] = { name: "外卖", type: "out", ing: "" };
+        saveAndRender();
+        closeModal('modalAction');
+    }
+
+    // 动作C: 手动选择 - 打开列表
+    function openManualSelect() {
+        closeModal('modalAction');
+        document.getElementById('modalSelect').style.display = 'flex';
+        renderSelectableList();
+    }
+
+    // 渲染可选列表
+    function renderSelectableList() {
+        const list = document.getElementById('selectableList');
+        const search = document.getElementById('selectSearch').value.toLowerCase();
+        list.innerHTML = "";
+        
+        // 过滤
+        let matched = recipes.filter(r => r.name.toLowerCase().includes(search));
+        
+        matched.forEach(r => {
+            let div = document.createElement('div');
+            div.className = 'select-item';
+            // 显示难度颜色
+            let diffColor = r.diff=='easy'?'var(--easy)' : (r.diff=='hard'?'var(--hard)':'var(--norm)');
+            
+            div.innerHTML = `
+                <div>
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${diffColor};margin-right:5px;"></span>
+                    <b>${r.name}</b> <span style="font-size:12px;color:#888;">${r.ing}</span>
+                </div>
+                <div class="badge b-${r.type}">${r.type=='meat'?'荤':(r.type=='veg'?'素':'汤')}</div>
+            `;
+            div.onclick = () => {
+                currentMenu[activeDayIdx].dishes[activeDishIdx] = r;
+                saveAndRender();
+                closeModal('modalSelect');
+            };
+            list.appendChild(div);
+        });
+    }
+
+    // 动作D: 编辑当前这道菜
+    function openEditorFromMenu() {
+        closeModal('modalAction');
+        let currentDish = currentMenu[activeDayIdx].dishes[activeDishIdx];
+        if(currentDish.name === "外卖") return alert("外卖不能编辑");
+        
+        // 找到它在库里的索引
+        let idx = recipes.findIndex(r => r.name === currentDish.name);
+        openEditor(idx);
+    }
+
+    // --- 4. 菜谱库管理 & 编辑器 ---
     function openManager() {
         document.getElementById('modalManager').style.display = 'flex';
         renderManagerList();
     }
-    
-    function renderManagerList() {
-        const keyword = document.getElementById('searchBox').value.toLowerCase();
-        const listEl = document.getElementById('managerList');
-        listEl.innerHTML = "";
-        document.getElementById('totalCount').innerText = recipes.length;
 
-        // 过滤 + 渲染
+    function renderManagerList() {
+        const list = document.getElementById('managerList');
+        const search = document.getElementById('mgrSearch').value.toLowerCase();
+        list.innerHTML = "";
+        
         recipes.forEach((r, idx) => {
-            if(r.name.includes(keyword) || r.ing.includes(keyword)) {
+            if(r.name.includes(search)) {
                 let div = document.createElement('div');
-                div.className = 'manager-item';
+                div.className = 'select-item';
                 div.innerHTML = `
-                    <div>
-                        <div style="font-weight:bold;">${r.name}</div>
-                        <div style="font-size:12px; color:#888;">${r.ing} ${r.link?'🔗':''}</div>
-                    </div>
-                    <div class="manager-actions">
-                        <button class="btn-sec" onclick="openEditor(${idx})">🖊️</button>
-                        <button class="btn-sec" style="color:#ff7675; border-color:#ff7675;" onclick="deleteDish(${idx})">✕</button>
-                    </div>
+                    <div><b>${r.name}</b> <small style="color:#aaa">${r.type}</small></div>
+                    <button class="btn-ghost" onclick="openEditor(${idx})">🖊️</button>
                 `;
-                listEl.appendChild(div);
+                list.appendChild(div);
             }
         });
     }
 
-    function deleteDish(idx) {
-        if(confirm("确定删除这道菜吗？")) {
-            recipes.splice(idx, 1);
-            saveRecipes();
-            renderManagerList();
-        }
-    }
-
-    // --- 4. 编辑/添加 弹窗 ---
     function openEditor(idx = -1) {
+        document.getElementById('modalManager').style.display = 'none'; // 暂时隐藏上级
         document.getElementById('modalEditor').style.display = 'flex';
-        document.getElementById('editIndex').value = idx;
+        document.getElementById('editIdx').value = idx;
         
         if(idx >= 0) {
-            // 编辑模式
             let r = recipes[idx];
-            document.getElementById('editorTitle').innerText = "编辑菜谱";
             document.getElementById('eName').value = r.name;
             document.getElementById('eType').value = r.type;
+            document.getElementById('eDiff').value = r.diff || 'norm';
             document.getElementById('eIng').value = r.ing;
             document.getElementById('eLink').value = r.link || "";
         } else {
-            // 新增模式
-            document.getElementById('editorTitle').innerText = "添加新菜";
             document.getElementById('eName').value = "";
             document.getElementById('eIng').value = "";
             document.getElementById('eLink').value = "";
@@ -431,80 +527,83 @@
     }
 
     function saveDish() {
-        let idx = parseInt(document.getElementById('editIndex').value);
+        let idx = parseInt(document.getElementById('editIdx').value);
         let newDish = {
             name: document.getElementById('eName').value,
             type: document.getElementById('eType').value,
+            diff: document.getElementById('eDiff').value,
             ing: document.getElementById('eIng').value,
             link: document.getElementById('eLink').value
         };
-
-        if(!newDish.name) return alert("菜名不能为空");
+        
+        if(!newDish.name) return alert("菜名必填");
 
         if(idx >= 0) {
-            recipes[idx] = newDish; // 更新
+            recipes[idx] = newDish;
+            // 如果菜单里有这道菜，也顺便更新一下显示
+            currentMenu.forEach(day => {
+                day.dishes.forEach((d, i) => { if(d.name === recipes[idx].name) day.dishes[i] = newDish; });
+            });
         } else {
-            recipes.push(newDish); // 新增
+            recipes.push(newDish);
         }
         
-        saveRecipes();
+        localStorage.setItem('myRecipes_v5', JSON.stringify(recipes));
+        saveAndRender();
         closeModal('modalEditor');
-        renderManagerList(); // 如果在管理器打开的情况下
     }
 
-    function saveRecipes() {
-        localStorage.setItem('myRecipes_v4', JSON.stringify(recipes));
+    // --- 5. 专注模式 ---
+    function openFocusMode() {
+        if(currentMenu.length === 0) return alert("先生成菜单！");
+        const panel = document.getElementById('focusMode');
+        const content = document.getElementById('focusContent');
+        panel.style.display = 'block';
+        content.innerHTML = "";
+
+        currentMenu.forEach(item => {
+            if(item.dishes.length === 0) return;
+            let html = `<div class="focus-card">
+                <h3 style="margin-top:0; color:#ff6b6b; font-size:24px;">${item.day}</h3>`;
+            
+            item.dishes.forEach(d => {
+                if(d.name === "外卖") {
+                    html += `<div style="padding:10px; background:#f0f0f0; border-radius:8px; margin-bottom:10px;">🛵 点外卖</div>`;
+                } else {
+                    let link = d.link ? `<a href="${d.link}" target="_blank" style="display:block; margin-top:5px; color:#0984e3;">📺哪怕看一眼教程</a>` : '';
+                    html += `
+                        <div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                            <div style="font-size:20px; font-weight:bold;">${d.name}</div>
+                            <div style="color:#666; margin-top:5px;">食材: ${d.ing}</div>
+                            ${link}
+                        </div>
+                    `;
+                }
+            });
+            html += `</div>`;
+            content.innerHTML += html;
+        });
     }
 
-    // --- 5. 数据同步 ---
-    function openImportExport() { document.getElementById('modalSync').style.display = 'flex'; }
-    
-    function doExport() {
-        let str = JSON.stringify(recipes);
-        let code = btoa(unescape(encodeURIComponent(str))); // 简单base64加密防乱码
-        document.getElementById('syncData').value = code;
-        document.getElementById('syncData').select();
-        document.execCommand("copy");
-        alert("已复制！发给对方即可。");
-    }
-
-    function doImport() {
-        let code = document.getElementById('syncData').value;
-        if(!code) return;
-        try {
-            let str = decodeURIComponent(escape(atob(code)));
-            let data = JSON.parse(str);
-            if(confirm(`检测到 ${data.length} 道菜，确定覆盖当前库吗？`)) {
-                recipes = data;
-                saveRecipes();
-                alert("导入成功！");
-                closeModal('modalSync');
-            }
-        } catch(e) { alert("代码格式错误"); }
-    }
-
-    // --- 通用 ---
+    // --- 通用工具 ---
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    window.onclick = (e) => { if(e.target.className === 'modal') e.target.style.display = 'none'; }
-    
-    function copyShop() {
-        let text = document.getElementById('shopList').innerText.replace(/\n\n/g, '\n');
-        let temp = document.createElement('textarea');
-        temp.value = "🛒 采购清单：\n" + text;
-        document.body.appendChild(temp);
-        temp.select();
-        document.execCommand("copy");
-        document.body.removeChild(temp);
-        alert("已复制清单");
-    }
-
     function clearAll() {
-        if(confirm("重置将清空【当前生成的菜单】，但保留【菜谱库】。确定吗？")) {
+        if(confirm("确定清空菜单吗？")) {
             currentMenu = [];
             selectedDays = [];
-            document.querySelectorAll('.day-opt').forEach(d=>d.classList.remove('selected'));
+            document.querySelectorAll('.day-opt').forEach(d => d.classList.remove('selected'));
             saveAndRender();
         }
+    }
+    function copyShop() {
+        let text = document.getElementById('shopList').innerText;
+        let area = document.createElement('textarea');
+        area.value = "🛒 采购清单：\n" + text;
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand('copy');
+        document.body.removeChild(area);
+        alert("已复制");
     }
 </script>
 </body>
