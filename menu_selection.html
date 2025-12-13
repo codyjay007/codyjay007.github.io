@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>周末小厨 & 数据同步版 🥘</title>
+    <style>
+        :root {
+            --primary: #ff6b6b;
+            --secondary: #4ecdc4;
+            --dark: #2d3436;
+            --light: #f7f9fc;
+            --highlight: #ffeaa7;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            max-width: 650px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+        
+        /* 标题区 */
+        h1 { text-align: center; color: var(--primary); margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #888; font-size: 13px; margin-bottom: 25px; }
+
+        /* 通用按钮样式 */
+        button { border: none; outline: none; cursor: pointer; transition: 0.2s; font-weight: bold; }
+        button:active { transform: scale(0.96); }
+        
+        .btn-main {
+            width: 100%; background: var(--primary); color: white;
+            padding: 15px; border-radius: 12px; font-size: 18px;
+            box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3); margin-top: 10px;
+        }
+        .btn-sec {
+            background: white; border: 1px solid #ddd; color: #666;
+            padding: 8px 15px; border-radius: 20px; font-size: 13px;
+        }
+        .btn-group { display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; }
+
+        /* 配置卡片 */
+        .card-box {
+            background: white; padding: 20px; border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 20px;
+        }
+        
+        /* 星期选择器 (修复Bug重点) */
+        .days-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+        .day-option {
+            background: #f1f2f6; color: #666;
+            padding: 10px; border-radius: 8px; text-align: center;
+            font-size: 14px; cursor: pointer; user-select: none; border: 2px solid transparent;
+        }
+        /* 选中状态样式 */
+        .day-option.selected {
+            background: var(--primary); color: white; border-color: var(--primary);
+            box-shadow: 0 2px 5px rgba(255, 107, 107, 0.4);
+        }
+
+        /* 菜单展示卡片 */
+        .menu-day {
+            background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px;
+            border-left: 6px solid var(--secondary); position: relative;
+        }
+        .menu-day-title { font-size: 18px; font-weight: 900; margin-bottom: 10px; color: #2d3436; }
+        
+        .dish-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 0; border-bottom: 1px dashed #eee;
+        }
+        .dish-row:last-child { border: none; }
+        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 6px; color: white; }
+        .tag-meat { background: #fab1a0; }
+        .tag-veg { background: #55efc4; }
+        .tag-soup { background: #74b9ff; }
+        .tag-out { background: #a29bfe; }
+        .tag-hard { background: #d63031; } /* 困难 */
+        .tag-easy { background: #00b894; } /* 简单 */
+
+        .link-icon { text-decoration: none; font-size: 14px; margin-left: 5px; }
+
+        /* 购物清单 */
+        .shop-box { background: #fff8e1; display: none; }
+        .shop-list { padding-left: 20px; columns: 2; font-size: 14px; line-height: 1.8; }
+
+        /* 模态框 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
+        .modal-content { background: white; width: 85%; max-width: 400px; padding: 25px; border-radius: 16px; animation: popUp 0.3s ease; }
+        @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+
+        /* 数据同步区域 */
+        .data-tools { margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; text-align: center; }
+        .data-link { color: #999; font-size: 12px; text-decoration: underline; cursor: pointer; margin: 0 10px; }
+
+    </style>
+</head>
+<body>
+
+    <h1>🥘 周末小厨 V3.0</h1>
+    <div class="subtitle">随机搭配 / 数据同步 / 智能清单</div>
+
+    <!-- 1. 设置区域 -->
+    <div class="card-box">
+        <b>📅 请选择做饭日期：</b>
+        <div class="days-grid" id="daysContainer">
+            <!-- JS 生成 -->
+        </div>
+        <br>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px;">
+            <label><input type="checkbox" id="checkSoup"> 🍲 配汤</label>
+            <label><input type="checkbox" id="checkOut"> 🛵 允许偶尔外卖</label>
+        </div>
+    </div>
+
+    <!-- 2. 主操作区 -->
+    <button class="btn-main" onclick="generateMenu()">🎲 生成下周菜单</button>
+    
+    <div class="btn-group">
+        <button class="btn-sec" onclick="openModal('add')">➕ 添加新菜</button>
+        <button class="btn-sec" onclick="clearHistory()">🗑️ 清除记录</button>
+    </div>
+
+    <!-- 3. 结果展示区 -->
+    <div id="menuArea" style="margin-top: 20px;"></div>
+
+    <!-- 4. 购物清单 -->
+    <div class="card-box shop-box" id="shopBox">
+        <h3 style="margin-top:0; color:#e17055;">🛒 采购清单</h3>
+        <ul class="shop-list" id="shopList"></ul>
+        <button class="btn-sec" style="width:100%; margin-top:10px;" onclick="copyShopList()">📋 复制清单</button>
+    </div>
+
+    <!-- 5. 数据同步小工具 -->
+    <div class="data-tools">
+        <p style="color:#bbb; font-size:12px;">数据管理 (用于两人同步)</p>
+        <span class="data-link" onclick="exportData()">📤 导出我的菜谱</span>
+        <span class="data-link" onclick="openModal('import')">📥 导入对方菜谱</span>
+    </div>
+
+    <!-- 通用弹窗 -->
+    <div id="modal" class="modal">
+        <!-- 动态内容 -->
+        <div class="modal-content" id="modalBody"></div>
+    </div>
+
+<script>
+    // --- 初始数据 (这就是你们的"出厂设置"，以后可以在这里直接改) ---
+    const defaultRecipes = [
+        { name: "辣椒炒肉", type: "meat", ing: "五花肉 青椒 蒜", link: "", diff: "easy" },
+        { name: "红烧排骨", type: "meat", ing: "排骨 姜 冰糖", link: "", diff: "hard" },
+        { name: "酸辣土豆丝", type: "veg", ing: "土豆 干辣椒 醋", link: "", diff: "easy" },
+        { name: "蒜蓉西兰花", type: "veg", ing: "西兰花 蒜", link: "", diff: "easy" },
+        { name: "番茄蛋汤", type: "soup", ing: "西红柿 鸡蛋", link: "", diff: "easy" }
+    ];
+
+    // --- 全局状态 ---
+    let myRecipes = JSON.parse(localStorage.getItem('myRecipes_v3')) || defaultRecipes;
+    const weekDays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+    let selectedDays = [];
+
+    // --- 初始化 ---
+    function init() {
+        // 渲染日期选择器
+        const container = document.getElementById('daysContainer');
+        weekDays.forEach(day => {
+            let div = document.createElement('div');
+            div.className = 'day-option';
+            div.innerText = day;
+            div.onclick = () => toggleDay(div, day);
+            container.appendChild(div);
+        });
+
+        // 恢复上次生成的菜单
+        const savedMenu = localStorage.getItem('currentMenu_v3');
+        if (savedMenu) renderMenu(JSON.parse(savedMenu));
+    }
+
+    // --- 交互逻辑 ---
+    
+    // 1. 日期选择 (修复反馈不明显的问题)
+    function toggleDay(el, day) {
+        if (selectedDays.includes(day)) {
+            selectedDays = selectedDays.filter(d => d !== day);
+            el.classList.remove('selected');
+        } else {
+            selectedDays.push(day);
+            el.classList.add('selected');
+        }
+    }
+
+    // 2. 生成菜单
+    function generateMenu() {
+        if (selectedDays.length === 0) { alert("请至少选一天！"); return; }
+
+        const needSoup = document.getElementById('checkSoup').checked;
+        const allowOut = document.getElementById('checkOut').checked;
+        
+        let menu = [];
+        let meats = myRecipes.filter(r => r.type === 'meat');
+        let vegs = myRecipes.filter(r => r.type === 'veg');
+        let soups = myRecipes.filter(r => r.type === 'soup');
+
+        selectedDays.forEach(day => {
+            // 10% 概率触发外卖 (如果开启)
+            if (allowOut && Math.random() < 0.1) {
+                menu.push({ day: day, isOut: true });
+                return;
+            }
+
+            let dishes = [];
+            // 随机取菜
+            if(meats.length) dishes.push(meats[Math.floor(Math.random() * meats.length)]);
+            if(vegs.length) dishes.push(vegs[Math.floor(Math.random() * vegs.length)]);
+            if(needSoup && soups.length) dishes.push(soups[Math.floor(Math.random() * soups.length)]);
+
+            menu.push({ day: day, isOut: false, dishes: dishes });
+        });
+
+        localStorage.setItem('currentMenu_v3', JSON.stringify(menu));
+        renderMenu(menu);
+    }
+
+    // 3. 渲染菜单
+    function renderMenu(menu) {
+        const area = document.getElementById('menuArea');
+        area.innerHTML = "";
+        let allIng = {};
+
+        if (menu.length === 0) return;
+
+        menu.forEach(item => {
+            let html = `<div class="menu-day"><div class="menu-day-title">${item.day}</div>`;
+            
+            if (item.isOut) {
+                html += `<div class="dish-row" style="justify-content:center; color:#a29bfe; font-weight:bold;">🛵 今天休息，点外卖！</div>`;
+            } else {
+                item.dishes.forEach(dish => {
+                    // 收集食材
+                    if(dish.ing) {
+                        dish.ing.split(" ").forEach(i => {
+                            if(i) allIng[i] = (allIng[i] || 0) + 1;
+                        });
+                    }
+
+                    // 难度标签
+                    let diffTag = dish.diff === 'hard' ? '<span class="tag tag-hard">耗时</span>' : '';
+                    let typeClass = dish.type === 'meat' ? 'tag-meat' : (dish.type === 'veg' ? 'tag-veg' : 'tag-soup');
+                    let typeName = dish.type === 'meat' ? '荤' : (dish.type === 'veg' ? '素' : '汤');
+                    let link = dish.link ? `<a href="${dish.link}" target="_blank" class="link-icon">🔗</a>` : '';
+
+                    html += `
+                        <div class="dish-row">
+                            <div>
+                                <span class="tag ${typeClass}">${typeName}</span>
+                                <b>${dish.name}</b>
+                                ${link}
+                            </div>
+                            ${diffTag}
+                        </div>
+                    `;
+                });
+            }
+            html += `</div>`;
+            area.innerHTML += html;
+        });
+
+        // 渲染购物清单
+        const shopList = document.getElementById('shopList');
+        shopList.innerHTML = "";
+        if (Object.keys(allIng).length > 0) {
+            document.getElementById('shopBox').style.display = 'block';
+            for (let [k, v] of Object.entries(allIng)) {
+                let li = document.createElement('li');
+                li.innerText = `${k} ${v > 1 ? '(x'+v+')' : ''}`;
+                shopList.appendChild(li);
+            }
+        } else {
+            document.getElementById('shopBox').style.display = 'none';
+        }
+    }
+
+    // 4. 清除记录 (修复Bug)
+    function clearHistory() {
+        if(confirm("确定清空当前生成的菜单吗？")) {
+            localStorage.removeItem('currentMenu_v3');
+            document.getElementById('menuArea').innerHTML = "";
+            document.getElementById('shopBox').style.display = "none";
+            // 还可以重置选择的日期
+            selectedDays = [];
+            document.querySelectorAll('.day-option').forEach(el => el.classList.remove('selected'));
+        }
+    }
+
+    // --- 弹窗与数据管理 ---
+    const modal = document.getElementById('modal');
+    const modalBody = document.getElementById('modalBody');
+
+    function openModal(type) {
+        modal.style.display = 'flex';
+        if (type === 'add') {
+            modalBody.innerHTML = `
+                <h3>🥘 添加新菜</h3>
+                <input id="inName" placeholder="菜名">
+                <select id="inType">
+                    <option value="meat">🍖 荤菜</option>
+                    <option value="veg">🥬 素菜</option>
+                    <option value="soup">🍲 汤</option>
+                </select>
+                <select id="inDiff">
+                    <option value="easy">⚡ 简单/快手</option>
+                    <option value="hard">🔥 复杂/耗时</option>
+                </select>
+                <input id="inIng" placeholder="食材 (空格分隔)">
+                <input id="inLink" placeholder="链接 (可选)">
+                <div class="btn-group">
+                    <button class="btn-main" onclick="saveNewDish()">保存</button>
+                    <button class="btn-sec" onclick="closeModal()">取消</button>
+                </div>
+            `;
+        } else if (type === 'import') {
+            modalBody.innerHTML = `
+                <h3>📥 导入数据</h3>
+                <p style="font-size:12px; color:#666;">请粘贴从另一台设备复制的数据代码：</p>
+                <textarea id="importText" rows="5"></textarea>
+                <div class="btn-group">
+                    <button class="btn-main" onclick="executeImport()">确定导入</button>
+                    <button class="btn-sec" onclick="closeModal()">取消</button>
+                </div>
+            `;
+        }
+    }
+
+    function closeModal() { modal.style.display = 'none'; }
+    window.onclick = (e) => { if(e.target == modal) closeModal(); }
+
+    // 保存新菜
+    function saveNewDish() {
+        const name = document.getElementById('inName').value;
+        if (!name) return alert("菜名必填");
+        
+        myRecipes.push({
+            name: name,
+            type: document.getElementById('inType').value,
+            ing: document.getElementById('inIng').value,
+            link: document.getElementById('inLink').value,
+            diff: document.getElementById('inDiff').value
+        });
+        
+        localStorage.setItem('myRecipes_v3', JSON.stringify(myRecipes));
+        alert("保存成功！");
+        closeModal();
+    }
+
+    // 导出数据
+    function exportData() {
+        const dataStr = JSON.stringify(myRecipes);
+        // Base64 编码一下，让它看起来像个代码，不容易乱
+        const code = btoa(unescape(encodeURIComponent(dataStr)));
+        navigator.clipboard.writeText(code).then(() => {
+            alert("✅ 你的菜谱数据已复制！\n\n请发送给女友，让她点击“导入数据”并粘贴。");
+        });
+    }
+
+    // 导入数据
+    function executeImport() {
+        const code = document.getElementById('importText').value;
+        if (!code) return;
+        try {
+            const jsonStr = decodeURIComponent(escape(atob(code)));
+            const newData = JSON.parse(jsonStr);
+            if (confirm(`检测到 ${newData.length} 道菜谱，确定覆盖你当前的菜谱库吗？`)) {
+                myRecipes = newData;
+                localStorage.setItem('myRecipes_v3', JSON.stringify(myRecipes));
+                alert("导入成功！");
+                closeModal();
+            }
+        } catch (e) {
+            alert("数据格式错误，请确保复制了完整的代码。");
+        }
+    }
+
+    function copyShopList() {
+        const text = document.getElementById('shopList').innerText;
+        navigator.clipboard.writeText("🛒 购物清单：\n" + text).then(()=>alert("已复制"));
+    }
+
+    // 启动
+    init();
+
+</script>
+</body>
+</html>
