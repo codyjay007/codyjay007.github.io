@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>海龟汤 AI 推理局</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="game">
+        <aside class="sidebar" aria-label="题目列表">
+          <div class="brand">
+            <span class="brand-mark">汤</span>
+            <div>
+              <h1>海龟汤</h1>
+              <p>AI 出题人模式</p>
+            </div>
+          </div>
+
+          <div class="filters" role="group" aria-label="筛选难度">
+            <button class="filter is-active" data-filter="all">全部</button>
+            <button class="filter" data-filter="easy">入门</button>
+            <button class="filter" data-filter="normal">标准</button>
+            <button class="filter" data-filter="hard">硬核</button>
+          </div>
+
+          <div id="puzzleList" class="puzzle-list"></div>
+        </aside>
+
+        <section class="board" aria-label="游戏区">
+          <header class="board-head">
+            <div>
+              <p id="difficulty" class="eyebrow"></p>
+              <h2 id="title"></h2>
+            </div>
+            <div class="score">
+              <span id="progress">0%</span>
+              <small>还原度</small>
+            </div>
+          </header>
+
+          <article class="surface">
+            <p id="surfaceText"></p>
+          </article>
+
+          <section class="conversation" aria-label="问答记录">
+            <div id="log" class="log"></div>
+          </section>
+
+          <form id="questionForm" class="composer">
+            <input
+              id="questionInput"
+              type="text"
+              autocomplete="off"
+              placeholder="只能问可以用“是/否/无关”回答的问题"
+              required
+            />
+            <button type="submit">提问</button>
+          </form>
+
+          <form id="guessForm" class="guess">
+            <textarea id="guessInput" rows="3" placeholder="觉得接近真相了，就写下你的完整推理"></textarea>
+            <button type="submit">提交推理</button>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="revealDialog">
+      <div class="dialog-body">
+        <p class="eyebrow">汤底</p>
+        <h3 id="revealTitle"></h3>
+        <p id="revealText"></p>
+        <button id="closeReveal" type="button">继续玩</button>
+      </div>
+    </dialog>
+
+    <script src="./config.js"></script>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
