@@ -39,6 +39,13 @@ button {
   cursor: pointer;
 }
 
+button:disabled,
+input:disabled,
+textarea:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .shell {
   width: min(1180px, calc(100vw - 32px));
   min-height: 100vh;
@@ -233,6 +240,12 @@ button {
   background: #2c2a23;
 }
 
+.bubble.host.loading {
+  position: relative;
+  color: var(--muted);
+  animation: pulse 1.15s ease-in-out infinite;
+}
+
 .bubble.system {
   justify-self: center;
   color: var(--muted);
@@ -322,6 +335,15 @@ dialog::backdrop {
 
 .dialog-body p {
   line-height: 1.7;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.58;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 860px) {
