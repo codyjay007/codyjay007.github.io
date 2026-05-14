@@ -1,9 +1,12 @@
 const config = window.TURTLE_CONFIG || {};
+const storageKey = "turtleSoupSessions:v1";
 
 const state = {
   puzzles: [],
   current: null,
   history: [],
+  messages: [],
+  sessions: loadStoredSessions(),
   filter: "all",
   progress: 0,
 };
@@ -76,14 +79,18 @@ function bindEvents() {
     event.preventDefault();
     const question = els.questionInput.value.trim();
     if (!question || !state.current) return;
+
     els.questionInput.value = "";
     addBubble("user", question);
-    setBusy(true);
+    const loadingBubble = addLoadingBubble();
+    setBusy(true, "提问中");
 
     try {
       const result = await askHost({ question });
+      removeLoadingBubble(loadingBubble);
       applyHostResult(result, question);
     } catch (error) {
+      removeLoadingBubble(loadingBubble);
       applyHostResult(aiNotReadyResult(error), question);
     } finally {
       setBusy(false);
@@ -94,13 +101,17 @@ function bindEvents() {
     event.preventDefault();
     const finalGuess = els.guessInput.value.trim();
     if (!finalGuess || !state.current) return;
+
     addBubble("user", `最终推理：${finalGuess}`);
-    setBusy(true);
+    const loadingBubble = addLoadingBubble("主持人正在核对汤底...");
+    setBusy(true, "判定中");
 
     try {
       const result = await askHost({ finalGuess });
+      removeLoadingBubble(loadingBubble);
       applyHostResult(result, finalGuess);
     } catch (error) {
+      removeLoadingBubble(loadingBubble);
       applyHostResult(aiNotReadyResult(error), finalGuess);
     } finally {
       setBusy(false);
@@ -127,16 +138,27 @@ function renderPuzzleList() {
 }
 
 function selectPuzzle(puzzle) {
+  saveActiveSession();
+
   state.current = puzzle;
-  state.history = [];
-  state.progress = 0;
+  const session = state.sessions[puzzle.id] || { history: [], messages: [], progress: 0 };
+  state.history = [...(session.history || [])];
+  state.messages = [...(session.messages || [])];
+  state.progress = Number(session.progress || 0);
+
   els.title.textContent = puzzle.title;
   els.difficulty.textContent = `${difficultyLabel[puzzle.difficulty]} · ${(puzzle.tags || []).join(" / ")}`;
   els.surfaceText.textContent = puzzle.surface;
-  els.progress.textContent = "0%";
-  els.log.innerHTML = "";
+  els.progress.textContent = `${state.progress}%`;
   els.guessInput.value = "";
-  addBubble("system", "新汤面已上桌。你可以开始提问。");
+  els.log.innerHTML = "";
+
+  if (state.messages.length) {
+    renderMessages();
+  } else {
+    addBubble("system", "新汤面已上桌。你可以开始提问。");
+  }
+
   renderPuzzleList();
 }
 
@@ -182,15 +204,17 @@ function applyHostResult(result, playerText) {
     els.progress.textContent = `${state.progress}%`;
   }
 
+  saveActiveSession();
+
   if (result.shouldReveal) revealSolution(result.solution);
 }
 
 function aiNotReadyResult(error) {
-  const isMissingKey = String(error?.message || "").includes("OPENAI_API_KEY");
+  const message = String(error?.message || "");
   return {
     answer: "后台未就绪",
-    hint: isMissingKey
-      ? "题库已上线，AI API Key 还没配置。"
+    hint: message.includes("rate") || message.includes("429")
+      ? "当前模型触发频率限制，等一会儿再问。"
       : "AI 裁判暂时不可用，请稍后再试。",
     progress: state.progress,
     shouldReveal: false,
@@ -203,15 +227,47 @@ function revealSolution(solution) {
   els.revealDialog.showModal();
 }
 
-function addBubble(type, content, asHtml = false) {
+function addBubble(type, content, asHtml = false, options = {}) {
   const item = document.createElement("div");
-  item.className = `bubble ${type}`;
+  item.className = `bubble ${type}${options.loading ? " loading" : ""}`;
   if (asHtml) {
     item.innerHTML = content;
   } else {
     item.textContent = content;
   }
   els.log.appendChild(item);
+  els.log.parentElement.scrollTop = els.log.parentElement.scrollHeight;
+
+  if (!options.temporary) {
+    state.messages.push({ type, content, asHtml });
+    saveActiveSession();
+  }
+
+  return item;
+}
+
+function addLoadingBubble(text = "主持人正在思考...") {
+  return addBubble("host", `<span class="tag">稍等</span>${escapeHtml(text)}`, true, {
+    loading: true,
+    temporary: true,
+  });
+}
+
+function removeLoadingBubble(item) {
+  if (item?.parentElement) item.parentElement.removeChild(item);
+}
+
+function renderMessages() {
+  state.messages.forEach((message) => {
+    const item = document.createElement("div");
+    item.className = `bubble ${message.type}`;
+    if (message.asHtml) {
+      item.innerHTML = message.content;
+    } else {
+      item.textContent = message.content;
+    }
+    els.log.appendChild(item);
+  });
   els.log.parentElement.scrollTop = els.log.parentElement.scrollHeight;
 }
 
@@ -224,11 +280,33 @@ function showEmpty(message) {
   addBubble("system", message);
 }
 
-function setBusy(isBusy) {
+function setBusy(isBusy, label) {
   els.questionInput.disabled = isBusy;
   els.guessInput.disabled = isBusy;
-  els.questionForm.querySelector("button").disabled = isBusy;
-  els.guessForm.querySelector("button").disabled = isBusy;
+  const questionButton = els.questionForm.querySelector("button");
+  const guessButton = els.guessForm.querySelector("button");
+  questionButton.disabled = isBusy;
+  guessButton.disabled = isBusy;
+  questionButton.textContent = isBusy ? label || "等待中" : "提问";
+  guessButton.textContent = isBusy ? label || "等待中" : "提交推理";
+}
+
+function saveActiveSession() {
+  if (!state.current) return;
+  state.sessions[state.current.id] = {
+    history: state.history,
+    messages: state.messages,
+    progress: state.progress,
+  };
+  localStorage.setItem(storageKey, JSON.stringify(state.sessions));
+}
+
+function loadStoredSessions() {
+  try {
+    return JSON.parse(localStorage.getItem(storageKey)) || {};
+  } catch (_) {
+    return {};
+  }
 }
 
 function escapeHtml(value) {
