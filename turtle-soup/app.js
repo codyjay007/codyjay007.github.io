@@ -117,7 +117,7 @@ function bindEvents() {
       applyHostResult(result, question);
     } catch (error) {
       removeLoadingBubble(loadingBubble);
-      applyHostResult(aiNotReadyResult(error), question);
+      applyHostResult(aiErrorResult(error), question);
     } finally {
       setBusy(false);
     }
@@ -138,7 +138,7 @@ function bindEvents() {
       applyHostResult(result, finalGuess);
     } catch (error) {
       removeLoadingBubble(loadingBubble);
-      applyHostResult(aiNotReadyResult(error), finalGuess);
+      applyHostResult(aiErrorResult(error), finalGuess);
     } finally {
       setBusy(false);
     }
@@ -242,13 +242,22 @@ function applyHostResult(result, playerText) {
   if (result.shouldReveal) revealSolution(result.solution);
 }
 
-function aiNotReadyResult(error) {
-  const message = String(error?.message || "");
+function aiErrorResult(error) {
+  const message = String(error?.message || "").toLowerCase();
+  let hint = "AI 裁判暂时不可用，请稍后再试。";
+  if (message.includes("rate") || message.includes("429") || message.includes("quota")) {
+    hint = "当前模型触发频率限制，等一会儿再问。";
+  } else if (message.includes("json") || message.includes("content")) {
+    hint = "模型回复格式异常，重试一次通常就好。";
+  } else if (message.includes("model") || message.includes("invalid_argument")) {
+    hint = "模型配置可能不对，需要检查 Supabase 的 AI_MODEL。";
+  } else if (message.includes("api_key") || message.includes("key")) {
+    hint = "AI key 配置可能失效，需要检查 Supabase Secrets。";
+  }
+
   return {
-    answer: "后台未就绪",
-    hint: message.includes("rate") || message.includes("429")
-      ? "当前模型触发频率限制，等一会儿再问。"
-      : "AI 裁判暂时不可用，请稍后再试。",
+    answer: "暂时失败",
+    hint,
     progress: state.progress,
     shouldReveal: false,
   };
