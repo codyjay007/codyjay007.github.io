@@ -44,25 +44,37 @@
             <p id="surfaceText"></p>
           </article>
 
+          <div class="control-row" aria-label="主持设置">
+            <div class="mode-group" role="group" aria-label="主持模式">
+              <span class="control-label">主持</span>
+              <button class="mode is-active" type="button" data-host-mode="standard">标准</button>
+              <button class="mode" type="button" data-host-mode="strict">硬核</button>
+              <button class="mode" type="button" data-host-mode="relaxed">宽松</button>
+            </div>
+            <button id="resetPuzzle" class="ghost-action" type="button">重开本题</button>
+          </div>
+
           <section class="conversation" aria-label="问答记录">
             <div id="log" class="log"></div>
           </section>
 
-          <form id="questionForm" class="composer">
-            <input
-              id="questionInput"
-              type="text"
-              autocomplete="off"
-              placeholder="只能问可以用“是/否/无关”回答的问题"
-              required
-            />
-            <button type="submit">提问</button>
-          </form>
+          <div class="input-dock">
+            <form id="questionForm" class="composer">
+              <input
+                id="questionInput"
+                type="text"
+                autocomplete="off"
+                placeholder="只能问可以用“是/否/无关”回答的问题"
+                required
+              />
+              <button type="submit">提问</button>
+            </form>
 
-          <form id="guessForm" class="guess">
-            <textarea id="guessInput" rows="3" placeholder="觉得接近真相了，就写下你的完整推理"></textarea>
-            <button type="submit">提交推理</button>
-          </form>
+            <form id="guessForm" class="guess">
+              <textarea id="guessInput" rows="3" placeholder="觉得接近真相了，就写下你的完整推理"></textarea>
+              <button type="submit">提交推理</button>
+            </form>
+          </div>
         </section>
       </section>
     </main>
