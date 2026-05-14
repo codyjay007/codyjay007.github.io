@@ -1,5 +1,6 @@
 const config = window.TURTLE_CONFIG || {};
 const storageKey = "turtleSoupSessions:v1";
+const hostModeKey = "turtleSoupHostMode:v1";
 
 const state = {
   puzzles: [],
@@ -8,6 +9,7 @@ const state = {
   messages: [],
   sessions: loadStoredSessions(),
   filter: "all",
+  hostMode: localStorage.getItem(hostModeKey) || "standard",
   progress: 0,
 };
 
@@ -22,6 +24,7 @@ const els = {
   questionInput: document.querySelector("#questionInput"),
   guessForm: document.querySelector("#guessForm"),
   guessInput: document.querySelector("#guessInput"),
+  resetPuzzle: document.querySelector("#resetPuzzle"),
   revealDialog: document.querySelector("#revealDialog"),
   revealTitle: document.querySelector("#revealTitle"),
   revealText: document.querySelector("#revealText"),
@@ -34,10 +37,17 @@ const difficultyLabel = {
   hard: "硬核",
 };
 
+const hostModeLabel = {
+  relaxed: "宽松",
+  standard: "标准",
+  strict: "硬核",
+};
+
 init();
 
 async function init() {
   bindEvents();
+  renderHostMode();
 
   try {
     state.puzzles = await loadPuzzles();
@@ -73,6 +83,22 @@ function bindEvents() {
       button.classList.add("is-active");
       renderPuzzleList();
     });
+  });
+
+  document.querySelectorAll(".mode").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.hostMode = button.dataset.hostMode || "standard";
+      localStorage.setItem(hostModeKey, state.hostMode);
+      renderHostMode();
+      addBubble("system", `主持模式已切换为：${hostModeLabel[state.hostMode] || "标准"}`);
+    });
+  });
+
+  els.resetPuzzle.addEventListener("click", () => {
+    if (!state.current) return;
+    delete state.sessions[state.current.id];
+    localStorage.setItem(storageKey, JSON.stringify(state.sessions));
+    selectPuzzle(state.current);
   });
 
   els.questionForm.addEventListener("submit", async (event) => {
@@ -137,6 +163,12 @@ function renderPuzzleList() {
   });
 }
 
+function renderHostMode() {
+  document.querySelectorAll(".mode").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.hostMode === state.hostMode);
+  });
+}
+
 function selectPuzzle(puzzle) {
   saveActiveSession();
 
@@ -173,6 +205,7 @@ async function askHost(payload) {
     body: JSON.stringify({
       puzzleId: state.current.id,
       history: state.history,
+      hostMode: state.hostMode,
       ...payload,
     }),
   });
