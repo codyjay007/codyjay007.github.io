@@ -54,6 +54,21 @@
             <button id="resetPuzzle" class="ghost-action" type="button">重开本题</button>
           </div>
 
+          <section class="assist-panel" aria-label="推理辅助">
+            <div>
+              <p class="assist-title">线索板</p>
+              <div id="clueBoard" class="clue-board"></div>
+            </div>
+            <div id="stuckPanel" class="stuck-panel" hidden>
+              <strong>可能卡住了</strong>
+              <p id="stuckText"></p>
+            </div>
+            <div class="recap-panel">
+              <p class="assist-title">阶段复盘</p>
+              <ul id="recapList"></ul>
+            </div>
+          </section>
+
           <section class="conversation" aria-label="问答记录">
             <div id="log" class="log"></div>
           </section>
@@ -71,8 +86,8 @@
             </form>
 
             <form id="guessForm" class="guess">
-              <textarea id="guessInput" rows="3" placeholder="觉得接近真相了，就写下你的完整推理"></textarea>
-              <button type="submit">提交推理</button>
+              <textarea id="guessInput" rows="3" placeholder="写下你的假说；接近汤底时主持人会自动揭晓"></textarea>
+              <button type="submit">提交假说</button>
             </form>
           </div>
         </section>
@@ -90,5 +105,6 @@
 
     <script src="./config.js"></script>
     <script src="./app.js" type="module"></script>
+    <script src="./assist.js" defer></script>
   </body>
 </html>
