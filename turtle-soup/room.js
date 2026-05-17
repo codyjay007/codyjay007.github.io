@@ -13,14 +13,13 @@ const room = {
   code: "",
   name: localStorage.getItem(roomNameKey) || "",
   channel: null,
-  seen: new Set(),
   messages: [],
-  history: [],
+  dbRoom: null,
   progress: 0,
   busy: false,
   applyingRemotePuzzle: false,
-  synced: false,
   puzzleId: "",
+  lastRenderKey: "",
 };
 
 const els = {
@@ -44,6 +43,7 @@ const els = {
 
 let puzzles = [];
 let puzzleObserverTimer = 0;
+let refreshTimer = 0;
 
 boot();
 
@@ -61,12 +61,12 @@ async function boot() {
   watchPuzzleChanges();
 
   const urlRoom = getRoomFromUrl();
-  if (urlRoom) joinRoom(urlRoom);
+  if (urlRoom) joinRoom(urlRoom, { createIfMissing: true });
 }
 
 function bindRoomEvents() {
-  els.create.addEventListener("click", () => joinRoom(makeRoomCode()));
-  els.join.addEventListener("click", () => joinRoom(els.code.value));
+  els.create.addEventListener("click", () => joinRoom(makeRoomCode(), { createIfMissing: true }));
+  els.join.addEventListener("click", () => joinRoom(els.code.value, { createIfMissing: true }));
   els.copy.addEventListener("click", copyRoomLink);
   els.leave.addEventListener("click", leaveRoom);
   els.name.addEventListener("change", () => {
@@ -91,66 +91,152 @@ function bindRoomEvents() {
     event.stopImmediatePropagation();
     const finalGuess = els.guessInput.value.trim();
     if (!finalGuess) return;
+    els.guessInput.value = "";
     submitRoomTurn({ finalGuess });
   }, true);
 }
 
-async function joinRoom(rawCode) {
+async function joinRoom(rawCode, options = {}) {
   const code = cleanRoomCode(rawCode);
   if (!code || !supabase) return;
 
+  setStatus("连接中");
   if (room.channel) await supabase.removeChannel(room.channel);
 
   room.active = true;
   room.code = code;
   room.name = cleanName(els.name.value) || room.name || `玩家${Math.floor(Math.random() * 90 + 10)}`;
-  room.channel = supabase.channel(`turtle-soup-room:${code}`, {
-    config: { broadcast: { self: false } },
-  });
-  room.seen = new Set();
   room.messages = [];
-  room.history = [];
-  room.progress = 0;
-  room.busy = false;
-  room.synced = false;
+  room.dbRoom = null;
   room.puzzleId = getCurrentPuzzle()?.id || "";
-
+  room.lastRenderKey = "";
   localStorage.setItem(roomNameKey, room.name);
   localStorage.setItem(roomRememberKey, code);
   els.name.value = room.name;
   els.code.value = code;
   setUrlRoom(code);
+  setRoomControls(true);
 
-  room.channel
-    .on("broadcast", { event: "room_event" }, ({ payload }) => handleRoomEvent(payload))
+  const currentPuzzle = getCurrentPuzzle();
+  const dbRoom = await ensureRoom(code, currentPuzzle, options.createIfMissing);
+  if (!dbRoom) {
+    pushSystem("没有找到这个房间。可以点开房创建一个新的。");
+    await leaveRoom({ quiet: true });
+    return;
+  }
+
+  subscribeRoom(code);
+  await fetchRoomState();
+  await insertSystemMessage(`${room.name} 已进入房间。`);
+  setStatus(`房间 ${code}`);
+}
+
+async function ensureRoom(code, puzzle, createIfMissing) {
+  const { data: existing, error } = await supabase
+    .from("turtle_rooms")
+    .select("*")
+    .eq("code", code)
+    .maybeSingle();
+
+  if (error) {
+    pushSystem("房间读取失败，请稍后重试。");
+    return null;
+  }
+  if (existing) return existing;
+  if (!createIfMissing) return null;
+
+  const { data, error: insertError } = await supabase
+    .from("turtle_rooms")
+    .insert({
+      code,
+      puzzle_id: puzzle?.id || null,
+      host_mode: getHostMode(),
+      progress: 0,
+    })
+    .select("*")
+    .single();
+
+  if (insertError) {
+    pushSystem("房间创建失败，请确认 Supabase 已执行房间表 SQL。");
+    return null;
+  }
+
+  await insertSystemMessage("房间已创建。");
+  return data;
+}
+
+function subscribeRoom(code) {
+  room.channel = supabase
+    .channel(`turtle-soup-db-room:${code}`)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "turtle_rooms",
+      filter: `code=eq.${code}`,
+    }, scheduleRoomRefresh)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "turtle_room_messages",
+      filter: `room_code=eq.${code}`,
+    }, scheduleRoomRefresh)
     .subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        setStatus(`房间 ${code}`);
-        setRoomControls(true);
-        pushSystem(`${room.name} 已进入房间。`);
-        broadcast({ type: "join", name: room.name });
-        broadcast({ type: "sync_request", name: room.name });
-        broadcastPuzzle();
-      } else {
-        setStatus("连接中");
-      }
+      if (status === "SUBSCRIBED") setStatus(`房间 ${code}`);
     });
 }
 
-async function leaveRoom() {
+function scheduleRoomRefresh() {
   if (!room.active) return;
-  broadcast({ type: "leave", name: room.name });
+  window.clearTimeout(refreshTimer);
+  refreshTimer = window.setTimeout(fetchRoomState, 80);
+}
+
+async function leaveRoom(options = {}) {
+  if (!room.active && !room.channel) return;
+  if (!options.quiet) await insertSystemMessage(`${room.name || "有人"} 离开了房间。`);
   if (room.channel) await supabase.removeChannel(room.channel);
   room.active = false;
   room.channel = null;
   room.code = "";
   room.busy = false;
+  room.dbRoom = null;
   localStorage.removeItem(roomRememberKey);
   setUrlRoom("");
   setRoomControls(false);
   setStatus("单人");
   setBusy(false);
-  pushSystem("已离开房间，当前页面可以继续单人玩。");
+  if (!options.quiet) pushSystem("已离开房间，当前页面可以继续单人玩。");
+}
+
+async function fetchRoomState() {
+  if (!room.active || !room.code) return;
+
+  const [{ data: dbRoom, error: roomError }, { data: messages, error: messageError }] = await Promise.all([
+    supabase.from("turtle_rooms").select("*").eq("code", room.code).single(),
+    supabase
+      .from("turtle_room_messages")
+      .select("*")
+      .eq("room_code", room.code)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true }),
+  ]);
+
+  if (roomError || messageError) {
+    pushSystem("房间同步失败，请刷新重试。");
+    return;
+  }
+
+  room.dbRoom = dbRoom;
+  room.messages = messages || [];
+  room.progress = Number(dbRoom.progress || 0);
+  room.puzzleId = dbRoom.puzzle_id || "";
+  room.busy = room.messages.some((message) => message.kind === "loading");
+
+  if (dbRoom.puzzle_id) applyRemotePuzzle(dbRoom.puzzle_id);
+  els.progress.textContent = `${room.progress}%`;
+  renderRoomMessages();
+  setBusy(room.busy, room.busy ? "等待中" : "");
+  if (dbRoom.is_revealed) revealRoomSolution(dbRoom.solution);
 }
 
 async function submitRoomTurn(payload) {
@@ -160,48 +246,54 @@ async function submitRoomTurn(payload) {
   }
 
   const puzzle = getCurrentPuzzle();
-  if (!puzzle) {
+  if (!puzzle || !room.dbRoom) {
     pushSystem("题目还没加载完成。");
     return;
   }
 
-  room.puzzleId = puzzle.id;
-  const playerText = payload.finalGuess ? `假说：${payload.finalGuess}` : payload.question;
-  const userMessage = {
-    type: "user",
-    name: room.name,
-    text: playerText,
-    rawText: payload.finalGuess || payload.question,
-    isGuess: Boolean(payload.finalGuess),
-  };
-
   room.busy = true;
-  room.messages.push(userMessage);
-  pushRoomLoading(payload.finalGuess ? "主持人正在核对汤底..." : "主持人正在思考...");
-  renderRoomMessages();
   setBusy(true, payload.finalGuess ? "判定中" : "提问中");
-  broadcast({ type: "user", puzzleId: puzzle.id, message: userMessage });
+  const playerText = payload.finalGuess ? `假说：${payload.finalGuess}` : payload.question;
+  const userMessage = await insertRoomMessage({
+    kind: "user",
+    player_name: room.name,
+    body: playerText,
+    is_guess: Boolean(payload.finalGuess),
+    client_message_id: `${clientId}:${Date.now()}`,
+  });
+  await pushRoomLoading(payload.finalGuess ? "主持人正在核对汤底..." : "主持人正在思考...");
+  await fetchRoomState();
 
   try {
-    const result = await askRoomHost(puzzle.id, payload);
-    applyRoomHostResult(result, userMessage);
-    broadcast({
-      type: "host",
-      puzzleId: puzzle.id,
-      result,
-      playerText: userMessage.rawText,
-      isGuess: userMessage.isGuess,
-      progress: room.progress,
-      history: room.history,
-      messages: room.messages,
+    const result = await askRoomHost(puzzle.id, {
+      history: buildHistory(room.messages.filter((message) => message.id !== userMessage?.id)),
+      ...payload,
     });
+    await clearRoomLoading();
+    await insertRoomMessage({
+      kind: "host",
+      body: result.hint || "",
+      answer: result.answer || "无法判断",
+      hint: result.hint || "",
+      progress: Number.isFinite(result.progress) ? Math.round(result.progress) : room.progress,
+      should_reveal: Boolean(result.shouldReveal),
+    });
+    await updateRoomProgress(result);
   } catch (error) {
+    await clearRoomLoading();
     const result = aiErrorResult(error);
-    applyRoomHostResult(result, userMessage);
-    broadcast({ type: "host", puzzleId: puzzle.id, result, playerText: userMessage.rawText, isGuess: userMessage.isGuess });
+    await insertRoomMessage({
+      kind: "host",
+      body: result.hint,
+      answer: result.answer,
+      hint: result.hint,
+      progress: room.progress,
+      should_reveal: false,
+    });
   } finally {
     room.busy = false;
     setBusy(false);
+    await fetchRoomState();
   }
 }
 
@@ -215,7 +307,6 @@ async function askRoomHost(puzzleId, payload) {
     },
     body: JSON.stringify({
       puzzleId,
-      history: room.history,
       hostMode: getHostMode(),
       ...payload,
     }),
@@ -231,72 +322,65 @@ async function askRoomHost(puzzleId, payload) {
   return response.json();
 }
 
-function handleRoomEvent(event) {
-  if (!event || event.senderId === clientId || room.seen.has(event.id)) return;
-  room.seen.add(event.id);
-
-  if (event.type === "join") {
-    pushSystem(`${event.name || "有人"} 进入了房间。`);
-    sendSyncState();
-    return;
-  }
-  if (event.type === "leave") {
-    pushSystem(`${event.name || "有人"} 离开了房间。`);
-    return;
-  }
-  if (event.type === "sync_request") {
-    sendSyncState();
-    return;
-  }
-  if (event.type === "sync_state") {
-    if (!room.synced && Array.isArray(event.messages)) applySyncState(event);
-    return;
-  }
-  if (event.type === "puzzle" && event.puzzleId) {
-    applyRemotePuzzle(event.puzzleId);
-    return;
-  }
-  if (event.type === "user" && event.message) {
-    room.busy = true;
-    if (event.puzzleId) applyRemotePuzzle(event.puzzleId);
-    room.messages.push(event.message);
-    pushRoomLoading(event.message.isGuess ? "主持人正在核对汤底..." : "主持人正在思考...");
-    renderRoomMessages();
-    setBusy(true, "等待中");
-    return;
-  }
-  if (event.type === "host" && event.result) {
-    room.busy = false;
-    if (event.puzzleId) applyRemotePuzzle(event.puzzleId);
-    applyRoomHostResult(event.result, {
-      rawText: event.playerText,
-      isGuess: Boolean(event.isGuess),
-    });
-    setBusy(false);
-  }
+async function insertSystemMessage(body) {
+  if (!room.active || !room.code) return null;
+  return insertRoomMessage({ kind: "system", body });
 }
 
-function applyRoomHostResult(result, userMessage) {
-  clearRoomLoading();
-  const answer = result.answer || "无法判断";
-  const hint = result.hint ? ` ${result.hint}` : "";
-  room.messages.push({ type: "host", html: `<span class="tag">${escapeHtml(answer)}</span>${escapeHtml(hint)}` });
-  room.history.push({
-    answer,
-    hint: result.hint || "",
-    question: userMessage.rawText || "",
-  });
+async function insertRoomMessage(message) {
+  if (!room.code) return null;
+  const { data, error } = await supabase
+    .from("turtle_room_messages")
+    .insert({ room_code: room.code, ...message })
+    .select("*")
+    .single();
+  if (error) {
+    pushSystem("消息写入失败，请检查房间表权限。");
+    return null;
+  }
+  return data;
+}
 
-  if (Number.isFinite(result.progress)) {
-    room.progress = Math.max(room.progress, Math.min(100, Math.round(result.progress)));
-    els.progress.textContent = `${room.progress}%`;
+async function pushRoomLoading(text) {
+  await clearRoomLoading();
+  return insertRoomMessage({
+    kind: "loading",
+    body: text,
+  });
+}
+
+async function clearRoomLoading() {
+  if (!room.code) return;
+  await supabase
+    .from("turtle_room_messages")
+    .delete()
+    .eq("room_code", room.code)
+    .eq("kind", "loading");
+}
+
+async function updateRoomProgress(result) {
+  const progress = Number.isFinite(result.progress)
+    ? Math.max(room.progress, Math.min(100, Math.round(result.progress)))
+    : room.progress;
+  const patch = {
+    progress,
+    updated_at: new Date().toISOString(),
+  };
+  if (result.shouldReveal) {
+    patch.is_revealed = true;
+    patch.solution = result.solution || "";
   }
 
-  renderRoomMessages();
-  if (result.shouldReveal) revealRoomSolution(result.solution);
+  await supabase
+    .from("turtle_rooms")
+    .update(patch)
+    .eq("code", room.code);
 }
 
 function renderRoomMessages() {
+  const renderKey = `${room.messages.length}:${room.messages.at(-1)?.id || ""}:${room.progress}`;
+  if (renderKey === room.lastRenderKey) return;
+  room.lastRenderKey = renderKey;
   els.log.innerHTML = "";
   room.messages.forEach((message) => appendRoomBubble(message));
   els.log.parentElement.scrollTop = els.log.parentElement.scrollHeight;
@@ -304,29 +388,21 @@ function renderRoomMessages() {
 
 function appendRoomBubble(message) {
   const item = document.createElement("div");
-  item.className = `bubble ${message.type}${message.loading ? " loading" : ""}`;
+  const type = message.kind === "loading" ? "host" : message.kind;
+  item.className = `bubble ${type}${message.kind === "loading" ? " loading" : ""}`;
 
-  if (message.type === "user") {
-    item.textContent = `${message.name || "玩家"}：${message.text || ""}`;
-  } else if (message.html) {
-    item.innerHTML = message.html;
+  if (message.kind === "user") {
+    item.textContent = `${message.player_name || "玩家"}：${message.body || ""}`;
+  } else if (message.kind === "host") {
+    const answer = message.answer || "无法判断";
+    const hint = message.hint ? ` ${message.hint}` : "";
+    item.innerHTML = `<span class="tag">${escapeHtml(answer)}</span>${escapeHtml(hint)}`;
+  } else if (message.kind === "loading") {
+    item.innerHTML = `<span class="tag">稍等</span>${escapeHtml(message.body || "主持人正在思考...")}`;
   } else {
-    item.textContent = message.text || "";
+    item.textContent = message.body || "";
   }
   els.log.appendChild(item);
-}
-
-function pushRoomLoading(text) {
-  clearRoomLoading();
-  room.messages.push({
-    type: "host",
-    html: `<span class="tag">稍等</span>${escapeHtml(text)}`,
-    loading: true,
-  });
-}
-
-function clearRoomLoading() {
-  room.messages = room.messages.filter((message) => !message.loading);
 }
 
 function pushSystem(text) {
@@ -338,36 +414,24 @@ function pushSystem(text) {
   els.log.parentElement.scrollTop = els.log.parentElement.scrollHeight;
 }
 
-function sendSyncState() {
-  if (!room.active || !room.channel) return;
-  broadcast({
-    type: "sync_state",
-    puzzleId: getCurrentPuzzle()?.id || room.puzzleId,
-    messages: room.messages,
-    history: room.history,
-    progress: room.progress,
-  });
-}
-
-function applySyncState(event) {
-  room.synced = true;
-  if (event.puzzleId) applyRemotePuzzle(event.puzzleId);
-  room.messages = event.messages || [];
-  room.history = event.history || [];
-  room.progress = Number(event.progress || 0);
-  els.progress.textContent = `${room.progress}%`;
-  renderRoomMessages();
-  pushSystem("已同步房间进度。");
-}
-
-function broadcastPuzzle() {
+async function broadcastPuzzle() {
   const puzzle = getCurrentPuzzle();
-  if (!room.active || !puzzle || room.applyingRemotePuzzle) return;
+  if (!room.active || !puzzle || room.applyingRemotePuzzle || room.puzzleId === puzzle.id) return;
   room.puzzleId = puzzle.id;
-  room.messages = [];
-  room.history = [];
   room.progress = 0;
-  broadcast({ type: "puzzle", puzzleId: puzzle.id, title: puzzle.title });
+  await supabase.from("turtle_room_messages").delete().eq("room_code", room.code);
+  await supabase
+    .from("turtle_rooms")
+    .update({
+      puzzle_id: puzzle.id,
+      progress: 0,
+      is_revealed: false,
+      solution: "",
+      host_mode: getHostMode(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("code", room.code);
+  await insertSystemMessage(`题目切换为：${puzzle.title}`);
 }
 
 function applyRemotePuzzle(puzzleId) {
@@ -394,6 +458,25 @@ function watchPuzzleChanges() {
   }).observe(title, { childList: true, characterData: true, subtree: true });
 }
 
+function buildHistory(messages) {
+  const history = [];
+  let pendingQuestion = "";
+  messages.forEach((message) => {
+    if (message.kind === "user") {
+      pendingQuestion = message.body || "";
+    }
+    if (message.kind === "host" && pendingQuestion) {
+      history.push({
+        question: pendingQuestion,
+        answer: message.answer || "",
+        hint: message.hint || "",
+      });
+      pendingQuestion = "";
+    }
+  });
+  return history.slice(-12);
+}
+
 async function loadPuzzles() {
   const endpoint = `${config.supabaseUrl}/rest/v1/turtle_puzzles?select=id,title,surface,difficulty,tags&is_published=eq.true&order=created_at.desc`;
   const response = await fetch(endpoint, {
@@ -411,21 +494,6 @@ function getCurrentPuzzle() {
   const surface = els.surface?.textContent || "";
   return puzzles.find((puzzle) => puzzle.title === title && puzzle.surface === surface)
     || puzzles.find((puzzle) => puzzle.title === title);
-}
-
-function broadcast(payload) {
-  if (!room.channel) return;
-  const event = {
-    id: crypto.randomUUID(),
-    senderId: clientId,
-    sentAt: Date.now(),
-    ...payload,
-  };
-  room.channel.send({
-    type: "broadcast",
-    event: "room_event",
-    payload: event,
-  });
 }
 
 function copyRoomLink() {
@@ -470,6 +538,8 @@ function aiErrorResult(error) {
   let hint = "AI 裁判暂时不可用，请稍后再试。";
   if (message.includes("rate") || message.includes("429") || message.includes("quota")) {
     hint = "当前模型触发频率限制，等一会儿再问。";
+  } else if (message.includes("json") || message.includes("truncated")) {
+    hint = "模型回复被截断或格式异常，请重试一次。";
   } else if (message.includes("model") || message.includes("invalid_argument")) {
     hint = "模型配置可能不对，需要检查 Supabase 的 AI_MODEL。";
   }
@@ -477,9 +547,12 @@ function aiErrorResult(error) {
 }
 
 function revealRoomSolution(solution) {
+  if (!solution) return;
+  const dialog = document.querySelector("#revealDialog");
+  if (dialog?.open) return;
   document.querySelector("#revealText").textContent = solution || "已还原真相。";
   document.querySelector("#revealTitle").textContent = els.title.textContent || "汤底";
-  document.querySelector("#revealDialog").showModal();
+  dialog.showModal();
 }
 
 function setUrlRoom(code) {
