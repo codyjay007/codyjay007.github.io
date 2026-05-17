@@ -177,6 +177,7 @@ async function submitRoomTurn(payload) {
 
   room.busy = true;
   room.messages.push(userMessage);
+  pushRoomLoading(payload.finalGuess ? "主持人正在核对汤底..." : "主持人正在思考...");
   renderRoomMessages();
   setBusy(true, payload.finalGuess ? "判定中" : "提问中");
   broadcast({ type: "user", puzzleId: puzzle.id, message: userMessage });
@@ -259,6 +260,7 @@ function handleRoomEvent(event) {
     room.busy = true;
     if (event.puzzleId) applyRemotePuzzle(event.puzzleId);
     room.messages.push(event.message);
+    pushRoomLoading(event.message.isGuess ? "主持人正在核对汤底..." : "主持人正在思考...");
     renderRoomMessages();
     setBusy(true, "等待中");
     return;
@@ -275,6 +277,7 @@ function handleRoomEvent(event) {
 }
 
 function applyRoomHostResult(result, userMessage) {
+  clearRoomLoading();
   const answer = result.answer || "无法判断";
   const hint = result.hint ? ` ${result.hint}` : "";
   room.messages.push({ type: "host", html: `<span class="tag">${escapeHtml(answer)}</span>${escapeHtml(hint)}` });
@@ -301,7 +304,7 @@ function renderRoomMessages() {
 
 function appendRoomBubble(message) {
   const item = document.createElement("div");
-  item.className = `bubble ${message.type}`;
+  item.className = `bubble ${message.type}${message.loading ? " loading" : ""}`;
 
   if (message.type === "user") {
     item.textContent = `${message.name || "玩家"}：${message.text || ""}`;
@@ -311,6 +314,19 @@ function appendRoomBubble(message) {
     item.textContent = message.text || "";
   }
   els.log.appendChild(item);
+}
+
+function pushRoomLoading(text) {
+  clearRoomLoading();
+  room.messages.push({
+    type: "host",
+    html: `<span class="tag">稍等</span>${escapeHtml(text)}`,
+    loading: true,
+  });
+}
+
+function clearRoomLoading() {
+  room.messages = room.messages.filter((message) => !message.loading);
 }
 
 function pushSystem(text) {
