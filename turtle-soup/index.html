@@ -25,6 +25,23 @@
             <button class="filter" data-filter="hard">硬核</button>
           </div>
 
+          <section id="roomPanel" class="room-panel" aria-label="多人房间">
+            <div class="room-head">
+              <strong>双人房间</strong>
+              <span id="roomStatus">单人</span>
+            </div>
+            <input id="playerNameInput" type="text" maxlength="12" placeholder="你的昵称" />
+            <div class="room-code-row">
+              <input id="roomCodeInput" type="text" maxlength="8" placeholder="房间码" />
+              <button id="joinRoomBtn" type="button">加入</button>
+            </div>
+            <div class="room-actions">
+              <button id="createRoomBtn" type="button">开房</button>
+              <button id="copyRoomBtn" type="button" disabled>复制链接</button>
+              <button id="leaveRoomBtn" type="button" disabled>离开</button>
+            </div>
+          </section>
+
           <div id="puzzleList" class="puzzle-list"></div>
         </aside>
 
@@ -106,5 +123,6 @@
     <script src="./config.js"></script>
     <script src="./app.js" type="module"></script>
     <script src="./assist.js" defer></script>
+    <script src="./room.js" type="module"></script>
   </body>
 </html>
