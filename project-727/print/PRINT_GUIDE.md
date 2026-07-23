@@ -23,9 +23,17 @@ Print `calibration/calibration-card.html` single-sided on matte cardstock. Cut t
 
 The card backs load coordinates from `shared/game-config.js`, the same source used by the runtime. If a Court coordinate changes, reprint the backs and rerun the validation tests.
 
+## Table
+
+- Print `table/limon-receipt.html` single-sided on warm white paper and cut on the dashed receipt boundary.
+- Print `table/drawer-marker.html` on removable label paper or light cardstock.
+- Choose one real kitchen drawer during setup and place one triangle marker where it is visible after the Table solve.
+- Put the sealed Room packet inside that marked drawer.
+
 ## Event-day print check
 
 - Measure one poker card after printing; it must be 2.5 × 3.5 inches.
 - Confirm every front has the expected back.
 - Compare all seven card-back coordinates with the operator answer sheet before sealing the packet.
+- Confirm the selected kitchen drawer opens freely and contains only the intended Room packet.
 - Keep one backup Court packet with the operator materials.

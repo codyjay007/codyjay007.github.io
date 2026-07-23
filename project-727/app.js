@@ -1,8 +1,8 @@
 'use strict';
 
-const STORAGE_KEY = 'project-727-state-v4';
-const PREVIOUS_STORAGE_KEYS = ['project-727-state-v3', 'project-727-state-v2', 'project-570-state-v1'];
-const STATE_VERSION = 4;
+const STORAGE_KEY = 'project-727-state-v5';
+const PREVIOUS_STORAGE_KEYS = ['project-727-state-v4', 'project-727-state-v3', 'project-727-state-v2', 'project-570-state-v1'];
+const STATE_VERSION = 5;
 
 if (!globalThis.PROJECT727_CONFIG) {
   throw new Error('Project 727 shared configuration failed to load.');
@@ -17,6 +17,9 @@ const COURT_SOLUTION_ORDER = COURT_SHOTS.map((shot) => shot.id);
 const COURT_LANDING_CONFIG = Object.fromEntries(COURT_SHOTS.map((shot) => [shot.id, shot.coordinate]));
 const COURT_ZONES = PROJECT727_CONFIG.court.zones;
 const COURT_REVEAL = PROJECT727_CONFIG.court.reveal;
+const TABLE_OBJECTS = PROJECT727_CONFIG.table.objects;
+const TABLE_SOLUTION_ORDER = PROJECT727_CONFIG.table.clockwiseOrder;
+const TABLE_REVEAL = PROJECT727_CONFIG.table.reveal;
 
 const CHAPTERS = [
   {
@@ -50,9 +53,9 @@ const CHAPTERS = [
     label: 'Record 02 — The Table',
     subtitle: 'First Date // Limon',
     zone: 'Kitchen',
-    objective: 'Rebuild the table arrangement using the six evidence cards.',
-    prompt: 'Enter the location keyword revealed by the completed table.',
-    answers: ['DRAWER'],
+    objective: 'Rebuild the table arrangement using the recovered Limon receipt.',
+    prompt: '',
+    answers: [],
     hints: [
       'Use Receipt as the fixed 12 o’clock anchor before placing anything else.',
       'Main and Lemon are opposite. Glass is immediately clockwise from Lemon.',
@@ -124,6 +127,15 @@ function createCourtState(overrides = {}) {
   };
 }
 
+function createTableState(overrides = {}) {
+  return {
+    arrangement: ['receipt', null, null, null, null, null],
+    selectedObject: null,
+    solved: false,
+    ...overrides
+  };
+}
+
 function createDefaultState() {
   return {
     authenticated: false,
@@ -134,7 +146,8 @@ function createDefaultState() {
     stateVersion: STATE_VERSION,
     chapterState: {
       boot: createBootState(),
-      court: createCourtState()
+      court: createCourtState(),
+      table: createTableState()
     }
   };
 }
@@ -144,6 +157,7 @@ let adminOpen = new URLSearchParams(location.search).get('admin') === '727';
 let feedback = '';
 let restoredOverlay = null;
 let draggedShotId = null;
+let draggedTableObjectId = null;
 let bootTransitionPending = false;
 
 function sanitizeShotOrder(order) {
@@ -163,6 +177,18 @@ function sanitizeLandingAssignments(assignments) {
   return Object.fromEntries(Object.entries(assignments || {}).filter(([shot, zone]) => validShots.has(shot) && validZones.has(zone)));
 }
 
+function sanitizeTableArrangement(arrangement) {
+  const validIds = new Set(TABLE_OBJECTS.map((item) => item.id));
+  const seen = new Set(['receipt']);
+  return Array.from({ length: 6 }, (_, index) => {
+    if (index === 0) return 'receipt';
+    const value = Array.isArray(arrangement) ? arrangement[index] : null;
+    if (!validIds.has(value) || value === 'receipt' || seen.has(value)) return null;
+    seen.add(value);
+    return value;
+  });
+}
+
 function migrateState(raw) {
   if (!raw || typeof raw !== 'object') return createDefaultState();
 
@@ -173,8 +199,10 @@ function migrateState(raw) {
   const isCurrentVersion = raw.stateVersion === STATE_VERSION;
   const oldBoot = raw.chapterState?.boot || {};
   const oldCourt = raw.chapterState?.court || {};
+  const oldTable = raw.chapterState?.table || {};
   const bootSolved = Boolean(oldBoot.solved || wasAuthenticated || completed.includes('boot'));
   const courtSolved = Boolean(oldCourt.solved || completed.includes('court'));
+  const tableSolved = Boolean(oldTable.solved || completed.includes('table'));
 
   if (bootSolved && !completed.includes('boot')) completed.unshift('boot');
 
@@ -202,6 +230,11 @@ function migrateState(raw) {
         landingAssignments: courtSolved ? { ...COURT_LANDING_CONFIG } : sanitizeLandingAssignments(oldCourt.landingAssignments),
         selectedShot: COURT_SHOTS.some((shot) => shot.id === oldCourt.selectedShot) ? oldCourt.selectedShot : null,
         solved: courtSolved
+      }),
+      table: createTableState({
+        arrangement: tableSolved ? [...TABLE_SOLUTION_ORDER] : sanitizeTableArrangement(oldTable.arrangement),
+        selectedObject: TABLE_OBJECTS.some((item) => item.id === oldTable.selectedObject && item.id !== 'receipt') ? oldTable.selectedObject : null,
+        solved: tableSolved
       })
     }
   };
@@ -527,13 +560,132 @@ function courtMarkup(chapter) {
     </section>`;
 }
 
+function tableObject(id) {
+  return TABLE_OBJECTS.find((item) => item.id === id);
+}
+
+function tablePositions(arrangement) {
+  return Object.fromEntries(arrangement.map((id, index) => [id, index]).filter(([id]) => id));
+}
+
+function tableAdjacent(first, second) {
+  const distance = Math.abs(first - second);
+  return distance === 1 || distance === 5;
+}
+
+function tableFeedback(table) {
+  if (table.solved) return { type: 'restored', message: 'TABLE RECORD RESTORED' };
+  const positions = tablePositions(table.arrangement);
+  const filled = table.arrangement.filter(Boolean).length;
+
+  if (positions.receipt !== 0) {
+    return { type: 'contradiction', message: 'Receipt must remain fixed at 12 o’clock.' };
+  }
+  if (positions.dessert !== undefined && positions.dessert !== 5) {
+    return { type: 'contradiction', message: 'Dessert must sit immediately counterclockwise from Receipt.' };
+  }
+  if (positions.main !== undefined && positions.lemon !== undefined && Math.abs(positions.main - positions.lemon) !== 3) {
+    return { type: 'contradiction', message: 'Main and Lemon must remain opposite.' };
+  }
+  if (positions.glass !== undefined && positions.lemon !== undefined && positions.glass !== (positions.lemon + 1) % 6) {
+    return { type: 'contradiction', message: 'Glass must sit immediately clockwise from Lemon.' };
+  }
+  if (positions.starter !== undefined && positions.glass !== undefined && !tableAdjacent(positions.starter, positions.glass)) {
+    return { type: 'contradiction', message: 'Starter must remain adjacent to Glass.' };
+  }
+  if (positions.starter !== undefined && positions.main !== undefined && !tableAdjacent(positions.starter, positions.main)) {
+    return { type: 'contradiction', message: 'Starter must remain adjacent to Main.' };
+  }
+  if (filled < 6) {
+    return { type: 'incomplete', message: 'Arrangement incomplete. Current placements remain consistent.' };
+  }
+  return TABLE_SOLUTION_ORDER.every((id, index) => table.arrangement[index] === id)
+    ? { type: 'restored', message: 'TABLE RECORD RESTORED' }
+    : { type: 'contradiction', message: 'The completed arrangement conflicts with the recovered receipt.' };
+}
+
+function tableSolvedMarkup(table) {
+  const revealTiles = table.arrangement.map((id, index) => {
+    const item = tableObject(id);
+    return `<span style="--delay:${index}"><small>${esc(item.label)}</small><strong>${esc(item.reveal)}</strong></span>`;
+  }).join('');
+  return `
+    <section class="table-complete-state">
+      <div class="receipt-scan">
+        <div class="scan-beam" aria-hidden="true"></div>
+        <div class="eyebrow">RECEIPT SCAN // VERIFIED</div>
+        <h2>FIRST DATE RECORD RESTORED</h2>
+        <div class="reveal-tiles" aria-label="Recovered location">${revealTiles}</div>
+      </div>
+      <div class="table-complete-copy">
+        <div class="restore-mark">✓</div>
+        <p>The six place records resolve to a marked storage point in the kitchen.</p>
+        <div class="next-source"><span>NEXT EVIDENCE SOURCE</span><strong>${esc(TABLE_REVEAL)}</strong></div>
+        <div class="marker-callout"><span>PLACEMENT MARK</span><strong>△</strong></div>
+        <button id="table-continue" class="primary">Continue to Room</button>
+      </div>
+    </section>`;
+}
+
+function tableMarkup(chapter) {
+  const table = state.chapterState.table;
+  if (table.solved) return tableSolvedMarkup(table);
+
+  const status = tableFeedback(table);
+  const hintCount = state.hintsUsed.table || 0;
+  const hints = chapter.hints.slice(0, hintCount).map((hint, index) => `
+    <p class="hint-line"><strong>H${index + 1}</strong><span>${esc(hint)}</span></p>`).join('');
+  const placed = new Set(table.arrangement.filter(Boolean));
+  const bank = TABLE_OBJECTS.filter((item) => !placed.has(item.id)).map((item) => `
+    <button class="table-token ${table.selectedObject === item.id ? 'selected' : ''}" draggable="true" data-table-token="${item.id}">
+      <span>${esc(item.symbol)}</span><strong>${esc(item.label)}</strong>
+    </button>`).join('');
+  const slots = table.arrangement.map((id, index) => {
+    const item = tableObject(id);
+    const fixed = index === 0;
+    return `
+      <div class="table-slot position-${index} ${id ? 'filled' : ''} ${table.selectedObject === id ? 'selected' : ''}" style="--position:${index}" data-table-slot="${index}" role="button" tabindex="${fixed ? '-1' : '0'}" aria-label="Table position ${index + 1}${item ? `, ${item.label}` : ', empty'}">
+        <span class="clock-label">${index === 0 ? '12' : index * 2} O’CLOCK</span>
+        ${item ? `<button class="table-token placed ${fixed ? 'fixed' : ''}" data-table-token="${item.id}" ${fixed ? 'disabled' : 'draggable="true"'}><span>${esc(item.symbol)}</span><strong>${esc(item.label)}</strong></button>${fixed ? '<small>FIXED ANCHOR</small>' : `<button class="remove-table-object" data-remove-table-object="${item.id}" aria-label="Remove ${esc(item.label)}">×</button>`}` : '<span class="table-slot-empty">PLACE RECORD</span>'}
+      </div>`;
+  }).join('');
+
+  return `
+    <section class="table-workspace">
+      <aside class="table-panel table-evidence">
+        <div class="eyebrow">RECORD 02 // FIRST DATE</div>
+        <h2>The Table</h2>
+        <div class="evidence-block"><span>PHYSICAL EVIDENCE</span><strong>LIMON RECEIPT</strong><small>Five recovered seating constraints</small></div>
+        <div class="evidence-block"><span>FIXED RECORD</span><p>Receipt remains at 12 o’clock. Arrange every other object clockwise around it.</p></div>
+        <div class="court-hints">
+          <div class="hint-header"><span>ASSISTANCE</span><button id="hint-button" class="ghost" ${hintCount >= 3 ? 'disabled' : ''}>Hint ${Math.min(hintCount + 1, 3)} / 3</button></div>
+          ${hints}
+        </div>
+      </aside>
+      <div class="table-panel table-board-panel">
+        <div class="panel-heading"><div><span>CIRCULAR RECONSTRUCTION</span><strong>DRAG OR CLICK TO PLACE</strong></div><button id="table-reset" class="ghost">Reset Table</button></div>
+        <div class="round-table" aria-label="Six-position circular table">
+          <div class="table-center"><span>PROJECT 727</span><strong>LIMON</strong><small>CLOCKWISE</small></div>
+          ${slots}
+        </div>
+      </div>
+      <aside class="table-panel table-bank-panel">
+        <div class="panel-heading"><div><span>RECOVERED OBJECTS</span><strong>SELECT A RECORD</strong></div></div>
+        <div class="table-bank">${bank || '<span class="bank-empty">All records placed.</span>'}</div>
+        <div class="puzzle-feedback ${status.type}" aria-live="polite"><strong>${esc(status.message)}</strong><span>${table.selectedObject ? `${esc(tableObject(table.selectedObject).label)} selected.` : 'Select an object, then choose a table position.'}</span></div>
+      </aside>
+    </section>`;
+}
+
 function adminMarkup() {
   if (!adminOpen) return '';
   const current = chapterById(state.currentChapter);
   const completedLabels = state.completed.map((id) => chapterById(id).label).join(', ');
   const hintsUsed = Object.values(state.hintsUsed).reduce((total, count) => total + count, 0);
   const court = state.chapterState.court;
+  const table = state.chapterState.table;
   const assignmentSummary = COURT_SHOTS.map((shot) => `${shot.label}:${court.landingAssignments[shot.id] || '—'}`).join(' · ');
+  const tableSummary = table.arrangement.map((id) => id ? tableObject(id).label : '—').join(' → ');
   return `
     <div class="modal-backdrop">
       <section class="admin-panel">
@@ -548,6 +700,8 @@ function adminMarkup() {
           <button id="admin-reset-boot">Reset Boot</button>
           <button id="admin-solve-court">Solve Court</button>
           <button id="admin-reset-court">Reset Court</button>
+          <button id="admin-solve-table">Solve Table</button>
+          <button id="admin-reset-table">Reset Table</button>
         </div>
         <form id="admin-boot-entry" class="admin-recovery-form">
           <label>Manual Boot recovery<input id="admin-subject-input" autocomplete="off" placeholder="ENTER SUBJECT" /></label>
@@ -557,6 +711,10 @@ function adminMarkup() {
           <summary>Inspect Court state</summary>
           <p><strong>ORDER</strong> ${esc(court.shotOrder.map((id) => id ? shotLabel(id) : '—').join(' → '))}</p>
           <p><strong>LANDINGS</strong> ${esc(assignmentSummary)}</p>
+        </details>
+        <details class="admin-inspector">
+          <summary>Inspect Table state</summary>
+          <p><strong>CLOCKWISE</strong> ${esc(tableSummary)}</p>
         </details>
         <div class="admin-grid">
           ${CHAPTERS.map((chapter) => `<button data-jump="${chapter.id}">Jump to ${chapter.id}</button>`).join('')}
@@ -571,7 +729,14 @@ function adminMarkup() {
 
 function appMarkup() {
   const chapter = chapterById(state.currentChapter);
-  const content = chapter.id === 'court' ? courtMarkup(chapter) : chapter.id === 'final' ? finalMarkup() : chapterMarkup(chapter);
+  const content = chapter.id === 'court'
+    ? courtMarkup(chapter)
+    : chapter.id === 'table'
+      ? tableMarkup(chapter)
+      : chapter.id === 'final'
+        ? finalMarkup()
+        : chapterMarkup(chapter);
+  const interactiveStage = ['court', 'table'].includes(chapter.id) ? `${chapter.id}-stage` : '';
   return `
     <div class="app-shell">
       <header class="topbar">
@@ -580,7 +745,7 @@ function appMarkup() {
       </header>
       <div class="workspace">
         <aside class="progress-rail"><div class="progress-title">ARCHIVE RECORDS</div>${progressMarkup()}</aside>
-        <main class="main-stage ${chapter.id === 'court' ? 'court-stage' : ''}">${content}</main>
+        <main class="main-stage ${interactiveStage}">${content}</main>
       </div>
       <footer>ARCHIVE BUILD 2026.07.27 // LOCAL SECURE SESSION</footer>
       ${adminMarkup()}
@@ -715,11 +880,69 @@ function resetCourtAdmin() {
   });
 }
 
+function placeTableObject(objectId, targetIndex) {
+  const table = state.chapterState.table;
+  if (table.solved || targetIndex === 0 || objectId === 'receipt') return;
+  const arrangement = [...table.arrangement];
+  const sourceIndex = arrangement.indexOf(objectId);
+  const displaced = arrangement[targetIndex];
+  if (sourceIndex > 0) arrangement[sourceIndex] = displaced || null;
+  arrangement[targetIndex] = objectId;
+  const nextTable = createTableState({ ...table, arrangement, selectedObject: objectId });
+  const solved = tableFeedback(nextTable).type === 'restored';
+  nextTable.solved = solved;
+  const completed = solved && !state.completed.includes('table') ? [...state.completed, 'table'] : state.completed;
+  if (solved) playTone('ok');
+  saveState({ ...state, completed, chapterState: { ...state.chapterState, table: nextTable } });
+}
+
+function removeTableObject(objectId) {
+  const table = state.chapterState.table;
+  if (table.solved || objectId === 'receipt') return;
+  const arrangement = table.arrangement.map((id) => id === objectId ? null : id);
+  saveState({
+    ...state,
+    chapterState: { ...state.chapterState, table: createTableState({ ...table, arrangement, selectedObject: null }) }
+  });
+}
+
+function solveTableAdmin() {
+  const completed = [...new Set(['boot', 'court', ...state.completed, 'table'])];
+  saveState({
+    ...state,
+    authenticated: true,
+    currentChapter: 'table',
+    completed,
+    chapterState: {
+      ...state.chapterState,
+      table: createTableState({ arrangement: [...TABLE_SOLUTION_ORDER], selectedObject: null, solved: true })
+    }
+  });
+}
+
+function resetTableAdmin() {
+  const hintsUsed = { ...state.hintsUsed };
+  delete hintsUsed.table;
+  saveState({
+    ...state,
+    authenticated: true,
+    currentChapter: 'table',
+    completed: state.completed.filter((id) => id !== 'table'),
+    hintsUsed,
+    chapterState: { ...state.chapterState, table: createTableState() }
+  });
+}
+
 function courtHasProgress() {
   const court = state.chapterState.court;
   return court.shotOrder.some(Boolean)
     || Object.keys(court.landingAssignments).length > 0
     || Boolean(state.hintsUsed.court);
+}
+
+function tableHasProgress() {
+  const table = state.chapterState.table;
+  return table.arrangement.slice(1).some(Boolean) || Boolean(state.hintsUsed.table);
 }
 
 function bindEvents() {
@@ -843,6 +1066,65 @@ function bindEvents() {
   const courtContinue = document.getElementById('court-continue');
   if (courtContinue) courtContinue.addEventListener('click', () => saveState({ ...state, currentChapter: 'table' }));
 
+  document.querySelectorAll('[data-table-token]').forEach((token) => {
+    if (token.dataset.tableToken === 'receipt') return;
+    token.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const table = state.chapterState.table;
+      if (table.solved) return;
+      saveState({
+        ...state,
+        chapterState: { ...state.chapterState, table: createTableState({ ...table, selectedObject: token.dataset.tableToken }) }
+      });
+    });
+    token.addEventListener('dragstart', (event) => {
+      draggedTableObjectId = token.dataset.tableToken;
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', draggedTableObjectId);
+    });
+    token.addEventListener('dragend', () => { draggedTableObjectId = null; });
+  });
+
+  document.querySelectorAll('[data-table-slot]').forEach((slot) => {
+    const targetIndex = Number(slot.dataset.tableSlot);
+    if (targetIndex === 0) return;
+    const placeSelected = () => {
+      const selected = state.chapterState.table.selectedObject;
+      if (selected) placeTableObject(selected, targetIndex);
+    };
+    slot.addEventListener('click', placeSelected);
+    slot.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        placeSelected();
+      }
+    });
+    slot.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+    });
+    slot.addEventListener('drop', (event) => {
+      event.preventDefault();
+      const objectId = event.dataTransfer.getData('text/plain') || draggedTableObjectId;
+      if (objectId) placeTableObject(objectId, targetIndex);
+      draggedTableObjectId = null;
+    });
+  });
+
+  document.querySelectorAll('[data-remove-table-object]').forEach((button) => button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    removeTableObject(button.dataset.removeTableObject);
+  }));
+
+  const tableReset = document.getElementById('table-reset');
+  if (tableReset) tableReset.addEventListener('click', () => {
+    if (tableHasProgress() && !window.confirm('Reset the Table reconstruction?')) return;
+    resetTableAdmin();
+  });
+
+  const tableContinue = document.getElementById('table-continue');
+  if (tableContinue) tableContinue.addEventListener('click', () => saveState({ ...state, currentChapter: 'room' }));
+
   const soundButton = document.getElementById('sound-button');
   if (soundButton) soundButton.addEventListener('click', () => saveState({ ...state, soundOn: !state.soundOn }));
 
@@ -888,6 +1170,12 @@ function bindEvents() {
 
   const adminResetCourt = document.getElementById('admin-reset-court');
   if (adminResetCourt) adminResetCourt.addEventListener('click', resetCourtAdmin);
+
+  const adminSolveTable = document.getElementById('admin-solve-table');
+  if (adminSolveTable) adminSolveTable.addEventListener('click', solveTableAdmin);
+
+  const adminResetTable = document.getElementById('admin-reset-table');
+  if (adminResetTable) adminResetTable.addEventListener('click', resetTableAdmin);
 
   const adminBootEntry = document.getElementById('admin-boot-entry');
   if (adminBootEntry) adminBootEntry.addEventListener('submit', (event) => {

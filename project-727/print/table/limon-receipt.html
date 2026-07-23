@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project 727 — Limon Receipt</title>
+  <link rel="stylesheet" href="../_print.css" />
+  <style>
+    .receipt-wrap { min-height: 10.5in; display: grid; place-items: center; }
+    .receipt { width: 3.35in; min-height: 8.6in; padding: .34in .28in; border: 1px dashed var(--line); background: #fffef8; box-shadow: inset 0 0 0 1px #ece7d9; }
+    .brand { text-align: center; }
+    .brand h1 { margin: .1in 0 .04in; color: var(--green); font-size: 34px; letter-spacing: .08em; }
+    .brand p, .receipt-meta, .footer { color: var(--muted); font: 8px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .08em; }
+    .rule { margin: .2in 0; border-top: 1px dashed #9eaa9f; }
+    .objects { display: grid; gap: .05in; margin: .18in 0; }
+    .objects div { display: flex; justify-content: space-between; font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .clues { margin: .16in 0 0; padding-left: .22in; }
+    .clues li { margin-bottom: .13in; font-size: 12px; line-height: 1.45; }
+    .total { display: flex; justify-content: space-between; color: var(--green); font-weight: 700; }
+    .footer { margin-top: .25in; text-align: center; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <i class="registration tl"></i><i class="registration tr"></i><i class="registration bl"></i><i class="registration br"></i>
+    <div class="receipt-wrap">
+      <article class="receipt">
+        <header class="brand">
+          <div class="eyebrow">Recovered Record 02</div>
+          <h1>LIMON</h1>
+          <p>TABLE ARCHIVE // FIRST DATE</p>
+        </header>
+        <div class="rule"></div>
+        <div class="receipt-meta">PARTY: 02<br>TABLE: ORIGIN<br>SEATING MODEL: CLOCKWISE</div>
+        <div class="rule"></div>
+        <div class="objects">
+          <div><span>RECEIPT</span><span>01</span></div>
+          <div><span>LEMON</span><span>01</span></div>
+          <div><span>GLASS</span><span>01</span></div>
+          <div><span>STARTER</span><span>01</span></div>
+          <div><span>MAIN</span><span>01</span></div>
+          <div><span>DESSERT</span><span>01</span></div>
+        </div>
+        <div class="rule"></div>
+        <div class="total"><span>RECOVERED CONSTRAINTS</span><span>05</span></div>
+        <ol class="clues">
+          <li>Receipt is fixed at 12 o’clock.</li>
+          <li>Dessert is immediately counterclockwise from Receipt.</li>
+          <li>Main and Lemon are opposite.</li>
+          <li>Glass is immediately clockwise from Lemon.</li>
+          <li>Starter is adjacent to both Glass and Main.</li>
+        </ol>
+        <div class="rule"></div>
+        <p class="footer">ARRANGE ALL SIX RECORDS ON THE TERMINAL<br>NO MANUAL SUBMISSION REQUIRED</p>
+      </article>
+    </div>
+    <div class="print-meta">Limon receipt // Letter // 100% scale</div>
+  </main>
+</body>
+</html>

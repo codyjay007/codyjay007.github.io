@@ -28,6 +28,18 @@
         { id: 'A3', x: 70, y: 235 }, { id: 'B3', x: 170, y: 235 }, { id: 'C3', x: 270, y: 235 }, { id: 'D3', x: 370, y: 235 },
         { id: 'A4', x: 70, y: 325 }, { id: 'B4', x: 170, y: 325 }, { id: 'C4', x: 270, y: 325 }, { id: 'D4', x: 370, y: 325 }
       ]
+    },
+    table: {
+      objects: [
+        { id: 'receipt', label: 'Receipt', symbol: '▤', reveal: 'D' },
+        { id: 'lemon', label: 'Lemon', symbol: '●', reveal: 'R' },
+        { id: 'glass', label: 'Glass', symbol: '◇', reveal: 'A' },
+        { id: 'starter', label: 'Starter', symbol: '◐', reveal: 'W' },
+        { id: 'main', label: 'Main', symbol: '▰', reveal: 'E' },
+        { id: 'dessert', label: 'Dessert', symbol: '△', reveal: 'R' }
+      ],
+      clockwiseOrder: ['receipt', 'lemon', 'glass', 'starter', 'main', 'dessert'],
+      reveal: 'DRAWER'
     }
   };
 

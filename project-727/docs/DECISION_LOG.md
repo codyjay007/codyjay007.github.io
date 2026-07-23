@@ -80,3 +80,18 @@ Reason:
 
 Impact:
 - Any later coordinate change requires a new print, test update, and physical rehearsal.
+
+## 2026-07-22 — Table is an automatic circular reconstruction
+
+Decision:
+- Receipt is a fixed 12 o’clock anchor.
+- Lemon, Glass, Starter, Main, and Dessert are placed by drag or click around six circular positions.
+- The interface validates after every placement and reveals the destination only after the full arrangement is correct.
+
+Reason:
+- The chapter must depend on the physical Limon receipt and must not collapse into a keyword form.
+- Local rule feedback supports recovery without revealing the full solution.
+
+Impact:
+- Table state and admin rescue are part of state version 5.
+- The exact real drawer remains an event-setup choice represented by a printable triangle marker.
