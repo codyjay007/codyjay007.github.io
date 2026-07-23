@@ -70,11 +70,11 @@ h1 span { color: var(--gold); }
 label { display: grid; gap: 8px; color: var(--muted); font: 500 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
 input { width: 100%; border: 1px solid rgba(170, 220, 188, .2); background: rgba(1, 5, 4, .64); color: var(--ink); padding: 15px 16px; outline: none; transition: .2s; }
 input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(135, 211, 162, .08); }
-.login-form button, .answer-form button, button.primary, .admin-grid button {
+.login-form button, button.primary, .admin-grid button {
   border: 1px solid rgba(185,245,202,.28); background: var(--green-bright); color: #07100a; padding: 15px 20px; font-weight: 800; transition: .18s;
 }
 .login-form button { grid-column: 1 / -1; }
-.login-form button:hover, .answer-form button:hover, button.primary:hover, .admin-grid button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.login-form button:hover, button.primary:hover, .admin-grid button:hover { transform: translateY(-1px); filter: brightness(1.05); }
 .status-message { min-height: 22px; margin-top: 16px; color: var(--muted); font: 500 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .06em; }
 .status-message.error { color: var(--danger); }
 .status-message.success { color: var(--green-bright); }
@@ -99,21 +99,15 @@ input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(135, 211, 1
 .chapter-number { position: absolute; right: 30px; top: 20px; color: rgba(216,189,128,.1); font-size: 94px; font-weight: 800; letter-spacing: -.08em; }
 .chapter-card h2 { max-width: 680px; margin: 12px 0 20px; font-size: clamp(34px, 5vw, 58px); line-height: 1; letter-spacing: -.045em; }
 .lead { max-width: 730px; color: #bac6bf; font-size: 16px; line-height: 1.75; }
-.zone-banner, .objective-box, .vault-instruction { border-left: 2px solid var(--green); background: rgba(135,211,162,.055); padding: 16px 18px; margin: 26px 0; }
-.zone-banner span, .objective-box span, .vault-instruction span { display: block; color: var(--muted); font: 500 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .14em; margin-bottom: 6px; }
+.zone-banner, .vault-instruction { border-left: 2px solid var(--green); background: rgba(135,211,162,.055); padding: 16px 18px; margin: 26px 0; }
+.zone-banner span, .vault-instruction span { display: block; color: var(--muted); font: 500 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .14em; margin-bottom: 6px; }
 .zone-banner strong { color: var(--green-bright); font-size: 15px; }
-.objective-box p { margin: 0; color: var(--ink); }
-.answer-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
-.answer-form input { min-width: 0; }
 .hint-area { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); }
 .hint-header { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
 .hint-header > span { color: var(--muted); font: 500 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .14em; }
 .hint-line { display: grid; grid-template-columns: 34px 1fr; gap: 12px; color: #aebbb3; font-size: 13px; line-height: 1.6; }
 .hint-line strong { color: var(--gold); font: 500 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-.restore-overlay { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: 40px; background: rgba(3,9,6,.94); animation: fadeIn .3s ease; }
 .restore-mark { width: 74px; height: 74px; margin: 0 auto 18px; display: grid; place-items: center; border: 1px solid var(--green); color: var(--green-bright); font-size: 34px; border-radius: 50%; box-shadow: 0 0 40px rgba(135,211,162,.16); }
-.restore-overlay h3 { margin: 0 0 12px; letter-spacing: .12em; color: var(--green-bright); }
-.restore-overlay p { max-width: 520px; color: #b9c6bd; line-height: 1.7; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .protocol-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 30px 0; }
 .protocol-grid > div { border: 1px solid var(--line); padding: 18px; min-height: 130px; }
@@ -380,7 +374,10 @@ code { color: var(--gold); }
 .origin-date-form p { margin: 0; color: #aebbb3; font-size: 11px; line-height: 1.55; }
 .origin-date-form button { width: 100%; }
 
-.admin-panel { max-height: calc(100vh - 48px); overflow-y: auto; }
+.admin-panel { max-height: calc(100vh - 48px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(135,211,162,.55) #07100c; }
+.admin-panel::-webkit-scrollbar { width: 9px; }
+.admin-panel::-webkit-scrollbar-track { background: #07100c; }
+.admin-panel::-webkit-scrollbar-thumb { background: rgba(135,211,162,.42); border: 2px solid #07100c; }
 .admin-rescue-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .admin-rescue-grid button, .admin-recovery-form button {
   border: 1px solid rgba(185,245,202,.22); background: rgba(135,211,162,.08); color: var(--green-bright); padding: 10px; font: 600 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -418,7 +415,7 @@ code { color: var(--gold); }
   .chapter-card, .login-card, .boot-card { padding: 32px 24px; }
   .topbar { padding: 16px 20px; align-items: flex-start; }
   .topbar-meta { gap: 8px; align-items: flex-end; flex-direction: column; }
-  .login-form, .answer-form, .protocol-grid, .final-metrics { grid-template-columns: 1fr; }
+  .login-form, .protocol-grid, .final-metrics { grid-template-columns: 1fr; }
   .vault-instruction { grid-template-columns: 1fr; }
   .operator-checklist { grid-template-columns: 1fr; }
   .boot-fragments { display: grid; grid-template-columns: 1fr 1fr; }

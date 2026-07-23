@@ -129,3 +129,17 @@ Impact:
 - Origin progress and date confirmation persist in state version 7.
 - The final player screen shows `MMDD` as a format but never prints the derived four-digit value.
 - Finale assets frame the Bvlgari ring as a birthday gift, not a proposal.
+
+## 2026-07-22 — Remove the generic chapter validator
+
+Decision:
+- Court, Table, Room, and Origin render only dedicated interactive workspaces.
+- The obsolete generic keyword form and shared answer-checking path are removed.
+- Full-date input remains only inside the gated Origin verification state.
+
+Reason:
+- Keeping dead answer-form code creates regression risk and makes the architecture less legible.
+
+Impact:
+- Integration tests fail if a generic answer form, stale Room keyword, remote dependency, or direct lock value returns.
+- Operator materials document all supported rescue actions without exposing them in player UI.

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project 727 — Operator Answer Sheet</title>
+  <link rel="stylesheet" href="../print/_print.css" />
+  <style>
+    .operator-sheet { padding: .45in; }
+    h1 { margin: .1in 0 .06in; color: var(--green); font-size: 30px; }
+    .warning { margin-bottom: .24in; padding: .12in; border: 2px solid #9c3d35; color: #9c3d35; font: 700 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-align: center; letter-spacing: .12em; }
+    .answer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .15in; }
+    .answer-block { border: 1px solid #aab7af; padding: .16in; break-inside: avoid; }
+    .answer-block h2 { margin: 0 0 .1in; color: var(--green); font-size: 17px; }
+    .answer-block p, .answer-block li, .answer-block td { font-size: 10px; line-height: 1.45; }
+    .answer-block ul, .answer-block ol { margin: .06in 0 0; padding-left: .2in; }
+    table { width: 100%; border-collapse: collapse; }
+    td { border-top: 1px solid #d1d9d4; padding: 4px; }
+    td:last-child { color: var(--gold); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-align: right; }
+  </style>
+</head>
+<body>
+  <main class="sheet operator-sheet">
+    <i class="registration tl"></i><i class="registration tr"></i><i class="registration bl"></i><i class="registration br"></i>
+    <div class="warning">OPERATOR ONLY // CONTAINS PUZZLE SOLUTIONS</div>
+    <div class="eyebrow">Project 727 // Event-Day Reference</div>
+    <h1>Answer Sheet</h1>
+    <div class="answer-grid">
+      <section class="answer-block"><h2>Calibration</h2><table id="calibration"></table><p>Full pattern decodes the subject identity. Manual recovery is available only in Admin.</p></section>
+      <section class="answer-block"><h2>Court</h2><table id="court"></table><p>Order: Serve → Clear → Net → Drop → Lift → Drive → Smash. Reveal: KITCHEN.</p></section>
+      <section class="answer-block"><h2>Table</h2><ol><li>Receipt</li><li>Lemon</li><li>Glass</li><li>Starter</li><li>Main</li><li>Dessert</li></ol><p>Read clockwise. Reveal: DRAWER // △.</p></section>
+      <section class="answer-block"><h2>Room</h2><p>Valid map: B.</p><p>Route: S → R → C → D → B → E → X.</p><p>Reveal: BEDROOM. Map A fails at the red door; Map C requires revisiting C.</p></section>
+      <section class="answer-block"><h2>Origin</h2><table id="origin-records"></table><p>Evidence: shuttlecock→Court, lemon→Table, keyhole→Room, linked circles→Status Change.</p><p>Full-date confirmation uses the relationship activation date in YYYY/MM/DD format.</p></section>
+      <section class="answer-block"><h2>Finale</h2><p>First player-facing Guest Bedroom reference occurs after date verification.</p><p>Access format: MMDD. Never say or display the derived four digits.</p></section>
+    </div>
+    <div class="print-meta">Operator answer sheet // keep hidden from player</div>
+  </main>
+  <script src="../shared/game-config.js"></script>
+  <script>
+    document.getElementById('calibration').innerHTML = PROJECT727_CONFIG.boot.fragments.map((fragment, index) => `<tr><td>F${index + 1}</td><td>${fragment.glyphs[fragment.correctOrientation]}</td></tr>`).join('');
+    document.getElementById('court').innerHTML = PROJECT727_CONFIG.court.shots.map((shot) => `<tr><td>${shot.label}</td><td>${shot.coordinate}</td></tr>`).join('');
+    document.getElementById('origin-records').innerHTML = PROJECT727_CONFIG.origin.records.map((record) => `<tr><td>${record.label}</td><td>Fragment ${record.fragment}</td></tr>`).join('');
+  </script>
+</body>
+</html>

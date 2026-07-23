@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project 727 — Operator Rescue Sheet</title>
+  <link rel="stylesheet" href="../print/_print.css" />
+  <style>
+    .operator-sheet { padding: .48in; }
+    h1 { margin: .1in 0 .16in; color: var(--green); font-size: 32px; }
+    .access { display: grid; grid-template-columns: 1fr 1fr; gap: .12in; margin-bottom: .2in; }
+    .access div { border: 1px solid #aab7af; padding: .16in; }
+    .access strong { display: block; margin-top: .06in; color: var(--gold); font: 700 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #aab7af; padding: .1in; font-size: 10px; line-height: 1.4; vertical-align: top; }
+    th { background: #edf3ef; color: var(--green); text-align: left; }
+    .principles { margin-top: .2in; display: grid; grid-template-columns: repeat(3,1fr); gap: .1in; }
+    .principles div { border-left: 3px solid var(--gold); background: #fffaf0; padding: .12in; font-size: 10px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <main class="sheet operator-sheet">
+    <i class="registration tl"></i><i class="registration tr"></i><i class="registration bl"></i><i class="registration br"></i>
+    <div class="eyebrow">Project 727 // Event-Day Recovery</div>
+    <h1>Rescue Sheet</h1>
+    <div class="access">
+      <div><span class="eyebrow">Keyboard shortcut</span><strong>Ctrl/Cmd + Shift + 9</strong></div>
+      <div><span class="eyebrow">Startup fallback</span><strong>Add ?admin=727 to the local URL</strong></div>
+    </div>
+    <table>
+      <thead><tr><th>Chapter</th><th>Normal rescue order</th><th>Admin actions</th></tr></thead>
+      <tbody>
+        <tr><td>Calibration</td><td>Wait 2–3 minutes → ask player to compare F1–F4 → use physical card again.</td><td>Solve/Reset Calibration; manual subject recovery only in Admin.</td></tr>
+        <tr><td>Court</td><td>Hints 1–3 → verify all seven card backs are present → confirm click-to-place.</td><td>Solve/Reset Court; inspect order and landing assignments.</td></tr>
+        <tr><td>Table</td><td>Hints 1–3 → confirm receipt is available → remind player Receipt is fixed.</td><td>Solve/Reset Table; inspect clockwise arrangement.</td></tr>
+        <tr><td>Room</td><td>Hints 1–3 → check map lighting → use Undo before Reset.</td><td>Solve/Reset Room; inspect map, route, and inventory.</td></tr>
+        <tr><td>Origin</td><td>Hints 1–3 → verify four cards/tokens → check timeline windows.</td><td>Solve Origin Layers first; bypass date only for a physical or technical failure.</td></tr>
+      </tbody>
+    </table>
+    <div class="principles">
+      <div>Use normal hints before verbal nudges.</div>
+      <div>Use Admin solve only for technical or physical failure.</div>
+      <div>Never say or display the final lock digits.</div>
+    </div>
+    <div class="print-meta">Operator rescue sheet // keep hidden from player</div>
+  </main>
+</body>
+</html>

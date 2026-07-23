@@ -186,8 +186,6 @@ function createDefaultState() {
 
 let state = loadState();
 let adminOpen = new URLSearchParams(location.search).get('admin') === '727';
-let feedback = '';
-let restoredOverlay = null;
 let draggedShotId = null;
 let draggedTableObjectId = null;
 let draggedOriginRecordId = null;
@@ -359,14 +357,6 @@ function nextChapter(id) {
   return CHAPTERS[Math.min(index + 1, CHAPTERS.length - 1)].id;
 }
 
-function normalize(value) {
-  return value.trim().toUpperCase().replace(/\s+/g, '');
-}
-
-function isCorrect(chapter, value) {
-  return chapter.answers.some((answer) => normalize(answer) === normalize(value));
-}
-
 function playTone(kind) {
   if (!state.soundOn) return;
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
@@ -467,32 +457,6 @@ function finalMarkup() {
       </div>
       <p class="final-copy">The birthday vault is now available. Use the verified activation date in the displayed access format.</p>
       <div class="birthday-line">HAPPY BIRTHDAY, TINA.</div>
-    </section>`;
-}
-
-function chapterMarkup(chapter) {
-  const hintCount = state.hintsUsed[chapter.id] || 0;
-  const hints = chapter.hints.slice(0, hintCount).map((hint, index) => `
-    <p class="hint-line"><strong>H${index + 1}</strong><span>${esc(hint)}</span></p>`).join('');
-
-  return `
-    <section class="chapter-card panel-glow">
-      <div class="chapter-number">0${chapter.index}</div>
-      <div class="eyebrow">${esc(chapter.subtitle)}</div>
-      <h2>${esc(chapter.label)}</h2>
-      <div class="zone-banner"><span>PHYSICAL RECONSTRUCTION ZONE</span><strong>${esc(chapter.zone)}</strong></div>
-      <p class="lead">${esc(chapter.objective)}</p>
-      <div class="objective-box"><span>TERMINAL VALIDATION</span><p>${esc(chapter.prompt)}</p></div>
-      <form id="answer-form" class="answer-form">
-        <input id="answer-input" autocomplete="off" placeholder="ENTER RECOVERED KEYWORD" autofocus />
-        <button type="submit">Validate record</button>
-      </form>
-      <div class="status-message ${feedback.startsWith('INVALID') ? 'error' : feedback ? 'success' : ''}">${feedback || 'Terminal ready.'}</div>
-      <div class="hint-area">
-        <div class="hint-header"><span>ASSISTANCE CHANNEL</span><button id="hint-button" class="ghost" ${hintCount >= chapter.hints.length ? 'disabled' : ''}>Reveal hint ${Math.min(hintCount + 1, chapter.hints.length)} / ${chapter.hints.length}</button></div>
-        ${hints}
-      </div>
-      ${restoredOverlay === chapter.id ? `<div class="restore-overlay"><div class="restore-mark">✓</div><h3>RECORD RESTORED</h3><p>${esc(chapter.restored)}</p></div>` : ''}
     </section>`;
 }
 
@@ -1153,7 +1117,7 @@ function appMarkup() {
           ? originMarkup(chapter)
       : chapter.id === 'final'
         ? finalMarkup()
-        : chapterMarkup(chapter);
+        : '';
   const interactiveStage = ['court', 'table', 'room', 'origin'].includes(chapter.id) ? `${chapter.id}-stage` : '';
   return `
     <div class="app-shell">
@@ -1573,11 +1537,6 @@ function tableHasProgress() {
   return table.arrangement.slice(1).some(Boolean) || Boolean(state.hintsUsed.table);
 }
 
-function roomHasProgress() {
-  const room = state.chapterState.room;
-  return Object.values(room.routes).some((route) => route.length > 1) || Boolean(state.hintsUsed.room);
-}
-
 function originHasProgress() {
   const origin = state.chapterState.origin;
   return origin.recordOrder.some(Boolean) || Object.keys(origin.tokenLinks).length > 0 || Boolean(state.hintsUsed.origin);
@@ -1585,29 +1544,6 @@ function originHasProgress() {
 
 function bindEvents() {
   document.querySelectorAll('[data-boot-fragment]').forEach((button) => button.addEventListener('click', () => updateBootFragment(Number(button.dataset.bootFragment))));
-
-  const answerForm = document.getElementById('answer-form');
-  if (answerForm) answerForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const chapter = chapterById(state.currentChapter);
-    const answer = document.getElementById('answer-input').value;
-    if (!isCorrect(chapter, answer)) {
-      feedback = 'INVALID RESPONSE — RECHECK PHYSICAL EVIDENCE';
-      playTone('error');
-      render();
-      return;
-    }
-    feedback = 'VALIDATION ACCEPTED';
-    restoredOverlay = chapter.id;
-    playTone('ok');
-    render();
-    setTimeout(() => {
-      const completed = state.completed.includes(chapter.id) ? state.completed : [...state.completed, chapter.id];
-      restoredOverlay = null;
-      feedback = '';
-      saveState({ ...state, completed, currentChapter: nextChapter(chapter.id) });
-    }, 2400);
-  });
 
   const hintButton = document.getElementById('hint-button');
   if (hintButton) hintButton.addEventListener('click', () => {
@@ -1900,8 +1836,8 @@ function bindEvents() {
   if (close) close.addEventListener('click', () => { adminOpen = false; render(); });
 
   document.querySelectorAll('[data-jump]').forEach((button) => button.addEventListener('click', () => {
-    feedback = '';
-    restoredOverlay = null;
+    roomFeedbackMessage = '';
+    originDateFeedback = '';
     const target = button.dataset.jump;
     saveState({ ...state, authenticated: target !== 'boot', currentChapter: target });
   }));
@@ -1963,7 +1899,8 @@ function bindEvents() {
     localStorage.removeItem(STORAGE_KEY);
     PREVIOUS_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
     state = createDefaultState();
-    feedback = '';
+    roomFeedbackMessage = '';
+    originDateFeedback = '';
     render();
   });
 
