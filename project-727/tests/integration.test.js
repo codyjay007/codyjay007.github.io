@@ -6,6 +6,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const requiredFiles = [
+  'START_PROJECT_727.cmd',
   'print/calibration/calibration-card.html',
   'print/court/shot-cards-front.html',
   'print/court/shot-cards-back.html',
@@ -22,7 +23,9 @@ const requiredFiles = [
   'print/PRINT_GUIDE.md',
   'operator/answer-sheet.html',
   'operator/placement-map.html',
-  'operator/rescue-sheet.html'
+  'operator/rescue-sheet.html',
+  'operator/EVENT_RUNBOOK.md',
+  'docs/EVENT_HARDENING.md'
 ];
 
 for (const file of requiredFiles) {

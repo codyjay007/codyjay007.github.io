@@ -335,7 +335,13 @@ function loadState() {
     const previous = PREVIOUS_STORAGE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
     const parsed = JSON.parse(stored || previous || 'null');
     const migrated = migrateState(parsed);
-    if (!stored && parsed) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    if (!stored && parsed) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      } catch {
+        // A readable legacy state remains usable even if the migrated copy cannot be written.
+      }
+    }
     return migrated;
   } catch {
     return createDefaultState();
@@ -344,7 +350,11 @@ function loadState() {
 
 function saveState(next) {
   state = migrateState(next);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Keep the in-memory session playable if browser storage becomes unavailable.
+  }
   render();
 }
 
@@ -361,19 +371,26 @@ function playTone(kind) {
   if (!state.soundOn) return;
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextCtor) return;
-  const ctx = new AudioContextCtor();
-  const oscillator = ctx.createOscillator();
-  const gain = ctx.createGain();
-  const frequencies = { ok: 740, error: 190, open: 520 };
-  oscillator.frequency.value = frequencies[kind];
-  oscillator.type = kind === 'error' ? 'sawtooth' : 'sine';
-  gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.11, ctx.currentTime + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (kind === 'open' ? 0.8 : 0.35));
-  oscillator.connect(gain);
-  gain.connect(ctx.destination);
-  oscillator.start();
-  oscillator.stop(ctx.currentTime + (kind === 'open' ? 0.85 : 0.4));
+  try {
+    const ctx = new AudioContextCtor();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const frequencies = { ok: 740, error: 190, open: 520 };
+    oscillator.frequency.value = frequencies[kind];
+    oscillator.type = kind === 'error' ? 'sawtooth' : 'sine';
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.11, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (kind === 'open' ? 0.8 : 0.35));
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.addEventListener('ended', () => {
+      if (typeof ctx.close === 'function') ctx.close().catch(() => {});
+    }, { once: true });
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + (kind === 'open' ? 0.85 : 0.4));
+  } catch {
+    // Sound is optional; an audio policy or device failure must never block progression.
+  }
 }
 
 function esc(value) {
@@ -386,7 +403,7 @@ function esc(value) {
 }
 
 function fullscreenButtonMarkup() {
-  const supported = Boolean(document.fullscreenEnabled && document.documentElement.requestFullscreen);
+  const supported = Boolean(document.documentElement.requestFullscreen && document.fullscreenEnabled !== false);
   const active = Boolean(document.fullscreenElement);
   return `<button id="fullscreen-button" class="utility-button" ${supported ? '' : 'disabled title="Fullscreen is unavailable in this browser"'}>${supported ? (active ? 'EXIT FULLSCREEN' : 'FULLSCREEN') : 'FULLSCREEN N/A'}</button>`;
 }
@@ -1896,8 +1913,12 @@ function bindEvents() {
   const reset = document.getElementById('admin-reset');
   if (reset) reset.addEventListener('click', () => {
     if (!window.confirm('Reset all game progress? This cannot be undone.')) return;
-    localStorage.removeItem(STORAGE_KEY);
-    PREVIOUS_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      PREVIOUS_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+    } catch {
+      // Continue with an in-memory reset when browser storage is unavailable.
+    }
     state = createDefaultState();
     roomFeedbackMessage = '';
     originDateFeedback = '';

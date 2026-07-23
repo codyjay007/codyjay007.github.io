@@ -143,3 +143,25 @@ Reason:
 Impact:
 - Integration tests fail if a generic answer form, stale Room keyword, remote dependency, or direct lock value returns.
 - Operator materials document all supported rescue actions without exposing them in player UI.
+
+## 2026-07-22 — Freeze the event build after physical rehearsal
+
+Decision:
+- The dependency-free local entry point remains the primary offline launch.
+- Storage and sound failures degrade safely without blocking the in-memory game.
+- Code and physical packets freeze together after a successful full physical rehearsal.
+
+Reason:
+- Event reliability depends on the tested combination of browser, laptop, print
+  alignment, room lighting, lock, box, and schedule rather than software alone.
+- Late coordinate or copy changes can invalidate already printed evidence.
+
+Impact:
+- `START_PROJECT_727.cmd` provides a one-step Windows launch without a build
+  tool or network service.
+- `docs/EVENT_HARDENING.md` separates verified software behavior from
+  real-world checks that still need the event operator.
+- `operator/EVENT_RUNBOOK.md` records the final rehearsal, backup kit, setup,
+  timing, and rescue gates.
+- After final approval, only critical event-blocking defects should change the
+  frozen build.
