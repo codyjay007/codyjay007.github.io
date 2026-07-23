@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project 727 — Operator Placement Map</title>
+  <link rel="stylesheet" href="../print/_print.css" />
+  <style>
+    .operator-sheet { padding: .48in; }
+    h1 { margin: .1in 0 .24in; color: var(--green); font-size: 32px; }
+    .route { display: grid; gap: .12in; }
+    .stop { display: grid; grid-template-columns: .55in 1.7in 1fr; gap: .15in; align-items: center; border: 1px solid #aab7af; padding: .16in; }
+    .stop > strong { width: .48in; height: .48in; display: grid; place-items: center; border-radius: 50%; background: var(--green); color: #fff; }
+    .stop h2 { margin: 0; color: var(--green); font-size: 17px; }
+    .stop p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .finale { border-color: var(--gold); background: #fffaf0; }
+    .warning { margin-top: .2in; padding: .14in; border: 2px solid #9c3d35; color: #9c3d35; font: 700 10px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-align: center; }
+  </style>
+</head>
+<body>
+  <main class="sheet operator-sheet">
+    <i class="registration tl"></i><i class="registration tr"></i><i class="registration bl"></i><i class="registration br"></i>
+    <div class="eyebrow">Project 727 // Setup Route</div>
+    <h1>Physical Placement Map</h1>
+    <div class="route">
+      <section class="stop"><strong>0</strong><h2>Living room laptop</h2><p>Open the local game at Calibration. Keep the calibration card beside the laptop.</p></section>
+      <section class="stop"><strong>1</strong><h2>Living room</h2><p>Place the sealed Court packet: seven shot cards plus rally rules.</p></section>
+      <section class="stop"><strong>2</strong><h2>Kitchen</h2><p>Place the Limon receipt. Mark one chosen drawer with △ and put the sealed Room packet inside.</p></section>
+      <section class="stop"><strong>3</strong><h2>Primary walk-in closet</h2><p>The Room packet contains Maps A/B/C and the optional overlay. Ensure readable lighting.</p></section>
+      <section class="stop"><strong>4</strong><h2>Primary bedroom</h2><p>Place record cards, timeline board, and evidence tokens. Keep the laptop accessible for final date verification.</p></section>
+      <section class="stop finale"><strong>5</strong><h2>Guest bedroom</h2><p>Keep closed until Finale. Place the visible birthday card before the recent photo, restored records, and Bvlgari original box.</p></section>
+      <section class="stop"><strong>6</strong><h2>After dinner</h2><p>Serve strawberry cake with the small Record 05 archive-update card. No additional puzzle.</p></section>
+    </div>
+    <div class="warning">GUEST BEDROOM IS FINALE-ONLY // TEST THE PHYSICAL LOCK AND KEEP A BACKUP UNLOCK METHOD</div>
+    <div class="print-meta">Operator placement map // keep hidden from player</div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,64 @@
+# Project 727 Print Guide
+
+## Global settings
+
+- Paper: US Letter.
+- Scale: 100% / Actual size. Disable “Fit to page”.
+- Margins: None in the browser print dialog; each asset contains its own 0.25-inch safe margin.
+- Headers and footers: Off.
+- Background graphics: On for the approved archive tint. Off is acceptable for low-ink mode; all critical information retains borders and text.
+- Fonts: All pages use local system fonts and require no network connection.
+
+## Calibration
+
+Print `calibration/calibration-card.html` single-sided on matte cardstock. Cut the 7 × 5 inch card on the dashed boundary. The card contains only the four target field symbols and does not print the decoded identity.
+
+## Court
+
+1. Print `court/shot-cards-front.html`.
+2. Duplex with `court/shot-cards-back.html`, portrait, long-edge binding.
+3. Confirm the four registration crosses align before cutting.
+4. Cut the seven 2.5 × 3.5 inch cards on the dashed boundaries.
+5. Print `court/rally-rules.html` single-sided.
+
+The card backs load coordinates from `shared/game-config.js`, the same source used by the runtime. If a Court coordinate changes, reprint the backs and rerun the validation tests.
+
+## Table
+
+- Print `table/limon-receipt.html` single-sided on warm white paper and cut on the dashed receipt boundary.
+- Print `table/drawer-marker.html` on removable label paper or light cardstock.
+- Choose one real kitchen drawer during setup and place one triangle marker where it is visible after the Table solve.
+- Put the sealed Room packet inside that marked drawer.
+
+## Room
+
+- Print `room/maps.html` single-sided; it produces one US Letter page each for Maps A, B, and C.
+- Keep all maps at 100% scale so arrows, door labels, and key labels remain readable.
+- Optional: print `room/optional-overlay.svg` on transparency film. It is atmospheric only and contains no critical evidence.
+- Test the packet in the primary bedroom walk-in closet under event lighting.
+
+## Origin
+
+- Print `origin/record-cards.html` on cardstock and cut the four cards.
+- Optional: replace each card’s photo placeholder with a local image before the final print; no answer depends on a photo.
+- Print `origin/timeline-board.html` on cardstock or mount it to a rigid backing.
+- Print and cut `origin/evidence-tokens.html`.
+- Rehearse placing the four cards from earliest to latest and verify each fragment is visible through its window.
+
+## Finale
+
+- Print `finale/birthday-record.html` on ivory or champagne stock. Place it before the gift box so the birthday framing is immediately visible.
+- Add a recent local photo if available.
+- Print `finale/archive-update-card.html` for the strawberry-cake epilogue after dinner.
+- Do not print or handwrite the final lock digits on either player-facing card.
+
+## Event-day print check
+
+- Measure one poker card after printing; it must be 2.5 × 3.5 inches.
+- Confirm every front has the expected back.
+- Compare all seven card-back coordinates with the operator answer sheet before sealing the packet.
+- Confirm the selected kitchen drawer opens freely and contains only the intended Room packet.
+- Confirm red/blue keys, matching doors, and one-way arrowheads are readable on all three Room maps.
+- Confirm the physical timeline yields the intended MMDD lock value without any digital screen displaying it.
+- Confirm the birthday card is encountered before the Bvlgari box.
+- Keep one backup Court packet with the operator materials.

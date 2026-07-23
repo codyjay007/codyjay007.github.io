@@ -1,0 +1,78 @@
+:root {
+  --ink: #13201a;
+  --muted: #5f6f66;
+  --green: #123c2b;
+  --green-soft: #e7efe9;
+  --gold: #9a7736;
+  --line: #9aa89f;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: var(--ink);
+  background: #dfe4e1;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { min-width: 8.5in; }
+.sheet {
+  position: relative;
+  width: 8.5in;
+  min-height: 11in;
+  margin: 0 auto .25in;
+  padding: .25in;
+  background: #fff;
+  overflow: hidden;
+  page-break-after: always;
+}
+.sheet:last-child { page-break-after: auto; }
+.print-meta {
+  position: absolute;
+  right: .28in;
+  bottom: .13in;
+  color: var(--muted);
+  font: 8px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.registration {
+  position: absolute;
+  width: .16in;
+  height: .16in;
+}
+.registration::before, .registration::after {
+  content: '';
+  position: absolute;
+  background: #111;
+}
+.registration::before { left: 50%; top: 0; width: 1px; height: 100%; }
+.registration::after { left: 0; top: 50%; width: 100%; height: 1px; }
+.registration.tl { left: .27in; top: .27in; }
+.registration.tr { right: .27in; top: .27in; }
+.registration.bl { left: .27in; bottom: .27in; }
+.registration.br { right: .27in; bottom: .27in; }
+.eyebrow {
+  color: var(--green);
+  font: 700 9px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.cut-card { position: relative; border: 1px dashed var(--line); overflow: hidden; }
+.cut-card::before {
+  content: '';
+  position: absolute;
+  inset: .12in;
+  border: 1px solid rgba(18,60,43,.15);
+  pointer-events: none;
+}
+.low-ink-note { color: var(--muted); font: 8px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+@media print {
+  @page { size: Letter portrait; margin: 0; }
+  body { min-width: 0; background: #fff; }
+  .sheet { margin: 0; }
+  .screen-only { display: none !important; }
+}
+
+@media screen {
+  body { padding: 24px 0; }
+  .sheet { box-shadow: 0 14px 50px rgba(0,0,0,.2); }
+}

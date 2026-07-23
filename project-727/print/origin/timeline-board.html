@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project 727 — Origin Timeline Board</title>
+  <link rel="stylesheet" href="../_print.css" />
+  <style>
+    .board-wrap { min-height: 10.5in; display: grid; place-items: center; }
+    .timeline-board { width: 7.6in; height: 6.3in; padding: .42in; border: 1px dashed var(--line); background: #f8faf8; }
+    h1 { margin: .08in 0 .12in; color: var(--green); font-size: 32px; }
+    .instruction { color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .timeline { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: .12in; margin-top: .5in; }
+    .timeline::before { content: ''; position: absolute; left: .4in; right: .4in; top: 50%; height: 2px; background: var(--gold); z-index: 0; }
+    .timeline-slot { position: relative; z-index: 1; height: 3.25in; display: grid; grid-template-rows: auto 1fr auto; padding: .18in; border: 1px solid #789083; background: #fff; }
+    .timeline-slot span, .timeline-slot small { color: var(--muted); font: 8px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .1em; }
+    .timeline-slot strong { align-self: center; color: #a7b3ac; font-size: 48px; text-align: center; }
+    .window { height: .58in; display: grid; place-items: center; border: 2px solid var(--gold); color: var(--gold); font: 700 9px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .1em; }
+    .direction { margin-top: .3in; display: flex; justify-content: space-between; color: var(--green); font: 700 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .12em; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <i class="registration tl"></i><i class="registration tr"></i><i class="registration bl"></i><i class="registration br"></i>
+    <div class="board-wrap">
+      <section class="timeline-board">
+        <div class="eyebrow">Record 04 // Physical Timeline</div>
+        <h1>Origin Reconstruction Sleeve</h1>
+        <p class="instruction">After the digital chronology is verified, place the four physical record cards from earliest to latest. Read the four fragments through the timeline windows, then return to the terminal.</p>
+        <div class="timeline">
+          <div class="timeline-slot"><span>POSITION 01</span><strong>+</strong><div class="window">WINDOW</div></div>
+          <div class="timeline-slot"><span>POSITION 02</span><strong>+</strong><div class="window">WINDOW</div></div>
+          <div class="timeline-slot"><span>POSITION 03</span><strong>+</strong><div class="window">WINDOW</div></div>
+          <div class="timeline-slot"><span>POSITION 04</span><strong>+</strong><div class="window">WINDOW</div></div>
+        </div>
+        <div class="direction"><span>EARLIEST</span><span>→ CHRONOLOGICAL ORDER →</span><span>LATEST</span></div>
+      </section>
+    </div>
+    <div class="print-meta">Origin timeline board // Letter // 100% scale</div>
+  </main>
+</body>
+</html>

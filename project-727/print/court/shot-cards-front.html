@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project 727 — Court Shot Cards Front</title>
+  <link rel="stylesheet" href="../_print.css" />
+  <style>
+    .card-grid { width: 7.5in; height: 10.5in; display: grid; grid-template-columns: repeat(3, 2.5in); grid-template-rows: repeat(3, 3.5in); margin: 0 auto; }
+    .shot-card { display: grid; place-items: center; padding: .25in; background: #f8faf8; text-align: center; }
+    .shot-card .index { position: absolute; left: .18in; top: .18in; color: var(--gold); font: 700 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .shot-card h2 { margin: .12in 0; color: var(--green); font-size: 27px; letter-spacing: -.02em; }
+    .shot-card p { margin: 0; color: var(--muted); font: 9px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .08em; }
+    .blank { border: 1px dashed #ccd4cf; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <i class="registration tl"></i><i class="registration tr"></i><i class="registration bl"></i><i class="registration br"></i>
+    <div id="cards" class="card-grid"></div>
+    <div class="print-meta">Court cards — fronts // duplex long-edge // 100%</div>
+  </main>
+  <script src="../../shared/game-config.js"></script>
+  <script>
+    const fronts = PROJECT727_CONFIG.court.shots.map((shot, index) => `
+      <article class="shot-card cut-card">
+        <span class="index">R${String(index + 1).padStart(2, '0')}</span>
+        <div><div class="eyebrow">Recovered Stroke</div><h2>${shot.label}</h2><p>FIRST CONTACT // CAN-AM</p></div>
+      </article>`).join('');
+    document.getElementById('cards').innerHTML = fronts + '<div class="blank"></div><div class="blank"></div>';
+  </script>
+</body>
+</html>
