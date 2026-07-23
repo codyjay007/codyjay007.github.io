@@ -1,16 +1,17 @@
 'use strict';
 
-const STORAGE_KEY = 'project-570-state-v1';
+const STORAGE_KEY = 'project-727-state-v2';
+const LEGACY_STORAGE_KEY = 'project-570-state-v1';
 
 const CHAPTERS = [
   {
     id: 'intro',
     index: 0,
     label: 'Identity Verification',
-    subtitle: 'Origin Archive // Case 570',
+    subtitle: 'Origin Archive // Project 727',
     zone: 'Living Room Terminal',
-    objective: 'Authenticate the subject and restore access to the archive.',
-    prompt: 'Enter the authorized subject name and case identifier.',
+    objective: 'Identify the subject and restore access to the archive.',
+    prompt: 'Enter the authorized subject name.',
     answers: [],
     hints: [],
     restored: 'Identity confirmed. Three origin records and one activation record remain corrupted.'
@@ -77,7 +78,7 @@ const CHAPTERS = [
       'Align the four record cards by time and inspect the windows in the timeline sleeve.',
       'The recovered date is January 28, 2025. Enter 2025/01/28.'
     ],
-    restored: 'Case 570 restored. A birthday record has been detected in primary storage.'
+    restored: 'Archive restored. A birthday record has been detected in primary storage.'
   },
   {
     id: 'final',
@@ -102,13 +103,18 @@ const DEFAULT_STATE = {
 };
 
 let state = loadState();
-let adminOpen = new URLSearchParams(location.search).get('admin') === '570';
+let adminOpen = new URLSearchParams(location.search).get('admin') === '727';
 let feedback = '';
 let restoredOverlay = null;
 
 function loadState() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    const current = localStorage.getItem(STORAGE_KEY);
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+    const parsed = JSON.parse(current || legacy || 'null');
+    if (!current && legacy && parsed) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULT_STATE, ...parsed }));
+    }
     return parsed ? { ...DEFAULT_STATE, ...parsed } : { ...DEFAULT_STATE };
   } catch {
     return { ...DEFAULT_STATE };
@@ -171,7 +177,7 @@ function loginMarkup() {
     <main class="login-shell">
       <section class="login-card panel-glow">
         <div class="eyebrow">ORIGIN ARCHIVE // SECURE TERMINAL</div>
-        <h1>PROJECT <span>570</span></h1>
+        <h1>PROJECT <span>727</span></h1>
         <div class="boot-copy">
           <p class="type-line" style="animation-delay:0ms">Archive integrity: 18%</p>
           <p class="type-line" style="animation-delay:160ms">Recovered subject record: T—N—</p>
@@ -179,8 +185,7 @@ function loginMarkup() {
         </div>
         <form id="login-form" class="login-form">
           <label>Authorized subject<input id="subject-input" autocomplete="off" autofocus /></label>
-          <label>Case identifier<input id="case-input" inputmode="numeric" autocomplete="off" /></label>
-          <button type="submit">Authenticate</button>
+          <button type="submit">Identify subject</button>
         </form>
         <div class="status-message ${feedback ? 'error' : ''}">${feedback || 'Awaiting credentials…'}</div>
       </section>
@@ -219,8 +224,8 @@ function introMarkup() {
 function finalMarkup() {
   return `
     <section class="chapter-card final-card panel-glow">
-      <div class="archive-seal">570</div>
-      <div class="eyebrow">CASE RESTORED</div>
+      <div class="archive-seal">727</div>
+      <div class="eyebrow">ARCHIVE RESTORED</div>
       <h2>Birthday record detected.</h2>
       <div class="final-metrics">
         <div><span>SUBJECT</span><strong>TINA</strong></div>
@@ -284,7 +289,7 @@ function adminMarkup() {
           <button id="admin-reset">Reset progress</button>
           <button id="admin-sound">Sound: ${state.soundOn ? 'on' : 'off'}</button>
         </div>
-        <p class="admin-note">Emergency shortcut: press Ctrl/Cmd + Shift + 9. Query parameter <code>?admin=570</code> also opens this console.</p>
+        <p class="admin-note">Emergency shortcut: press Ctrl/Cmd + Shift + 9. Query parameter <code>?admin=727</code> also opens this console.</p>
       </section>
     </div>`;
 }
@@ -297,8 +302,8 @@ function appMarkup() {
   return `
     <div class="app-shell">
       <header class="topbar">
-        <div><div class="eyebrow">PROJECT 570</div><strong>ORIGIN ARCHIVE</strong></div>
-        <div class="topbar-meta"><span>SUBJECT: TINA</span><span>CASE: 570</span><button id="fullscreen-button" class="utility-button" ${fullscreenSupported ? '' : 'disabled title="Fullscreen is unavailable in this browser"'}>${fullscreenSupported ? (fullscreenActive ? 'EXIT FULLSCREEN' : 'FULLSCREEN') : 'FULLSCREEN N/A'}</button><button id="sound-button" class="utility-button">${state.soundOn ? 'SOUND ON' : 'SOUND OFF'}</button></div>
+        <div><div class="eyebrow">PROJECT 727</div><strong>ORIGIN ARCHIVE</strong></div>
+        <div class="topbar-meta"><span>SUBJECT: TINA</span><span>ARCHIVE: ACTIVE</span><button id="fullscreen-button" class="utility-button" ${fullscreenSupported ? '' : 'disabled title="Fullscreen is unavailable in this browser"'}>${fullscreenSupported ? (fullscreenActive ? 'EXIT FULLSCREEN' : 'FULLSCREEN') : 'FULLSCREEN N/A'}</button><button id="sound-button" class="utility-button">${state.soundOn ? 'SOUND ON' : 'SOUND OFF'}</button></div>
       </header>
       <div class="workspace">
         <aside class="progress-rail"><div class="progress-title">RESTORED RECORDS</div>${progressMarkup()}</aside>
@@ -321,8 +326,7 @@ function bindEvents() {
     loginForm.addEventListener('submit', (event) => {
       event.preventDefault();
       const subject = document.getElementById('subject-input').value.trim().toUpperCase();
-      const caseId = document.getElementById('case-input').value.trim();
-      if (subject === 'TINA' && caseId === '570') {
+      if (subject === 'TINA') {
         feedback = '';
         playTone('open');
         saveState({ ...state, authenticated: true, currentChapter: 'intro' });
@@ -403,6 +407,7 @@ function bindEvents() {
   if (reset) reset.addEventListener('click', () => {
     if (!window.confirm('Reset all game progress? This cannot be undone.')) return;
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
     state = { ...DEFAULT_STATE, authenticated: true };
     feedback = '';
     render();
