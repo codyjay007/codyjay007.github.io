@@ -71,7 +71,7 @@ const v4State = {
   }
 };
 const migrated = run(`migrateState(${JSON.stringify(v4State)})`);
-assert.equal(migrated.stateVersion, 5);
+assert.equal(migrated.stateVersion, 6);
 assert.equal(migrated.currentChapter, 'table');
 assert.deepEqual([...migrated.chapterState.table.arrangement], ['receipt', null, null, null, null, null]);
 

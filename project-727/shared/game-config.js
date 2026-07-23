@@ -40,6 +40,70 @@
       ],
       clockwiseOrder: ['receipt', 'lemon', 'glass', 'starter', 'main', 'dessert'],
       reveal: 'DRAWER'
+    },
+    room: {
+      maps: {
+        A: {
+          label: 'Map A',
+          nodes: [
+            { id: 'S', x: 8, y: 50 },
+            { id: 'C', x: 28, y: 50 },
+            { id: 'D', x: 50, y: 50 },
+            { id: 'R', x: 72, y: 50, item: 'red' },
+            { id: 'X', x: 92, y: 50 }
+          ],
+          edges: [
+            { from: 'S', to: 'C' },
+            { from: 'C', to: 'D', door: 'red' },
+            { from: 'D', to: 'R' },
+            { from: 'R', to: 'X' }
+          ]
+        },
+        B: {
+          label: 'Map B',
+          nodes: [
+            { id: 'S', x: 8, y: 70, reveal: 'B' },
+            { id: 'R', x: 23, y: 30, item: 'red', reveal: 'E' },
+            { id: 'C', x: 38, y: 62, reveal: 'D' },
+            { id: 'D', x: 54, y: 28, reveal: 'R' },
+            { id: 'B', x: 69, y: 62, item: 'blue', reveal: 'O' },
+            { id: 'E', x: 84, y: 30, reveal: 'O' },
+            { id: 'X', x: 94, y: 70, reveal: 'M' }
+          ],
+          edges: [
+            { from: 'S', to: 'R' },
+            { from: 'R', to: 'C', twoWay: true },
+            { from: 'C', to: 'D', door: 'red' },
+            { from: 'D', to: 'B', twoWay: true },
+            { from: 'B', to: 'E', door: 'blue' },
+            { from: 'E', to: 'X' }
+          ]
+        },
+        C: {
+          label: 'Map C',
+          nodes: [
+            { id: 'S', x: 8, y: 70 },
+            { id: 'R', x: 23, y: 30, item: 'red' },
+            { id: 'C', x: 42, y: 60 },
+            { id: 'D', x: 56, y: 25 },
+            { id: 'B', x: 72, y: 60, item: 'blue' },
+            { id: 'E', x: 84, y: 30 },
+            { id: 'X', x: 94, y: 70 }
+          ],
+          edges: [
+            { from: 'S', to: 'R' },
+            { from: 'R', to: 'C', twoWay: true },
+            { from: 'C', to: 'D', door: 'red' },
+            { from: 'D', to: 'B' },
+            { from: 'B', to: 'C' },
+            { from: 'C', to: 'E', door: 'blue' },
+            { from: 'E', to: 'X' }
+          ]
+        }
+      },
+      intendedMap: 'B',
+      intendedRoute: ['S', 'R', 'C', 'D', 'B', 'E', 'X'],
+      reveal: 'BEDROOM'
     }
   };
 

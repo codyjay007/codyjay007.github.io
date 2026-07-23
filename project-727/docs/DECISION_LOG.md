@@ -95,3 +95,20 @@ Reason:
 Impact:
 - Table state and admin rescue are part of state version 5.
 - The exact real drawer remains an event-setup choice represented by a printable triangle marker.
+
+## 2026-07-22 — Room uses a deterministic graph engine
+
+Decision:
+- Maps A, B, and C share one graph configuration between the runtime and physical map generator.
+- The runtime enforces direction, keys, door consumption, central-room visitation, and no revisits.
+- Only Map B has one valid escape route.
+- The restored destination is `BEDROOM`.
+
+Reason:
+- The Room must be the hardest chapter while remaining uniquely solvable and recoverable on event day.
+- Physical maps retain the key, door, and arrow evidence; the browser validates the route rather than accepting a keyword.
+
+Impact:
+- Room routes and selected map persist in state version 6.
+- Map A fails at a key-after-door condition; Map C fails because it requires revisiting C.
+- The optional overlay is noncritical and may be omitted without changing solvability.

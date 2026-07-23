@@ -1,8 +1,8 @@
 'use strict';
 
-const STORAGE_KEY = 'project-727-state-v5';
-const PREVIOUS_STORAGE_KEYS = ['project-727-state-v4', 'project-727-state-v3', 'project-727-state-v2', 'project-570-state-v1'];
-const STATE_VERSION = 5;
+const STORAGE_KEY = 'project-727-state-v6';
+const PREVIOUS_STORAGE_KEYS = ['project-727-state-v5', 'project-727-state-v4', 'project-727-state-v3', 'project-727-state-v2', 'project-570-state-v1'];
+const STATE_VERSION = 6;
 
 if (!globalThis.PROJECT727_CONFIG) {
   throw new Error('Project 727 shared configuration failed to load.');
@@ -20,6 +20,10 @@ const COURT_REVEAL = PROJECT727_CONFIG.court.reveal;
 const TABLE_OBJECTS = PROJECT727_CONFIG.table.objects;
 const TABLE_SOLUTION_ORDER = PROJECT727_CONFIG.table.clockwiseOrder;
 const TABLE_REVEAL = PROJECT727_CONFIG.table.reveal;
+const ROOM_MAPS = PROJECT727_CONFIG.room.maps;
+const ROOM_INTENDED_MAP = PROJECT727_CONFIG.room.intendedMap;
+const ROOM_INTENDED_ROUTE = PROJECT727_CONFIG.room.intendedRoute;
+const ROOM_REVEAL = PROJECT727_CONFIG.room.reveal;
 
 const CHAPTERS = [
   {
@@ -69,13 +73,13 @@ const CHAPTERS = [
     label: 'Record 03 — The Room',
     subtitle: 'First Escape // Omescape',
     zone: 'Primary Bedroom Walk-in Closet',
-    objective: 'Identify the only escapable map, then align the overlay correctly.',
-    prompt: 'Enter the location keyword visible through the aligned overlay.',
-    answers: ['CLOSET'],
+    objective: 'Use the physical maps to construct the only route that satisfies every access rule.',
+    prompt: '',
+    answers: [],
     hints: [
       'Eliminate any map that forces a locked door before its matching key is collected.',
       'The valid route must pass the center and never revisit a room. Rotate the overlay toward the entrance.',
-      'Use the only map that satisfies every movement rule, then read the exposed letters: CLOSET.'
+      'Use Map B and begin with S → R → C. Continue without revisiting a room.'
     ],
     restored: 'Record restored: three beginnings are intact. One event changed the archive from two records into one case.'
   },
@@ -136,6 +140,15 @@ function createTableState(overrides = {}) {
   };
 }
 
+function createRoomState(overrides = {}) {
+  return {
+    selectedMap: 'A',
+    routes: { A: ['S'], B: ['S'], C: ['S'] },
+    solved: false,
+    ...overrides
+  };
+}
+
 function createDefaultState() {
   return {
     authenticated: false,
@@ -147,7 +160,8 @@ function createDefaultState() {
     chapterState: {
       boot: createBootState(),
       court: createCourtState(),
-      table: createTableState()
+      table: createTableState(),
+      room: createRoomState()
     }
   };
 }
@@ -159,6 +173,7 @@ let restoredOverlay = null;
 let draggedShotId = null;
 let draggedTableObjectId = null;
 let bootTransitionPending = false;
+let roomFeedbackMessage = '';
 
 function sanitizeShotOrder(order) {
   const validIds = new Set(COURT_SHOTS.map((shot) => shot.id));
@@ -189,6 +204,19 @@ function sanitizeTableArrangement(arrangement) {
   });
 }
 
+function sanitizeRoomRoutes(routes) {
+  return Object.fromEntries(Object.keys(ROOM_MAPS).map((mapId) => {
+    const source = Array.isArray(routes?.[mapId]) ? routes[mapId] : ['S'];
+    const route = ['S'];
+    for (const nodeId of source.slice(source[0] === 'S' ? 1 : 0)) {
+      const move = roomMoveStatus(mapId, route, nodeId);
+      if (!move.ok) break;
+      route.push(nodeId);
+    }
+    return [mapId, route];
+  }));
+}
+
 function migrateState(raw) {
   if (!raw || typeof raw !== 'object') return createDefaultState();
 
@@ -200,9 +228,11 @@ function migrateState(raw) {
   const oldBoot = raw.chapterState?.boot || {};
   const oldCourt = raw.chapterState?.court || {};
   const oldTable = raw.chapterState?.table || {};
+  const oldRoom = raw.chapterState?.room || {};
   const bootSolved = Boolean(oldBoot.solved || wasAuthenticated || completed.includes('boot'));
   const courtSolved = Boolean(oldCourt.solved || completed.includes('court'));
   const tableSolved = Boolean(oldTable.solved || completed.includes('table'));
+  const roomSolved = Boolean(oldRoom.solved || completed.includes('room'));
 
   if (bootSolved && !completed.includes('boot')) completed.unshift('boot');
 
@@ -235,6 +265,13 @@ function migrateState(raw) {
         arrangement: tableSolved ? [...TABLE_SOLUTION_ORDER] : sanitizeTableArrangement(oldTable.arrangement),
         selectedObject: TABLE_OBJECTS.some((item) => item.id === oldTable.selectedObject && item.id !== 'receipt') ? oldTable.selectedObject : null,
         solved: tableSolved
+      }),
+      room: createRoomState({
+        selectedMap: ROOM_MAPS[oldRoom.selectedMap] ? oldRoom.selectedMap : (roomSolved ? ROOM_INTENDED_MAP : 'A'),
+        routes: roomSolved
+          ? { ...createRoomState().routes, [ROOM_INTENDED_MAP]: [...ROOM_INTENDED_ROUTE] }
+          : sanitizeRoomRoutes(oldRoom.routes),
+        solved: roomSolved
       })
     }
   };
@@ -677,6 +714,197 @@ function tableMarkup(chapter) {
     </section>`;
 }
 
+function roomMap(mapId) {
+  return ROOM_MAPS[mapId] || ROOM_MAPS.A;
+}
+
+function roomEdgeForMove(mapId, from, to) {
+  return roomMap(mapId).edges.find((edge) =>
+    (edge.from === from && edge.to === to)
+    || (edge.twoWay && edge.from === to && edge.to === from)
+  );
+}
+
+function simulateRoomRoute(mapId, route) {
+  const map = roomMap(mapId);
+  const inventory = new Set();
+  const consumedDoors = [];
+  const visited = new Set();
+  let error = '';
+
+  for (let index = 0; index < route.length; index += 1) {
+    const nodeId = route[index];
+    const node = map.nodes.find((item) => item.id === nodeId);
+    if (!node || visited.has(nodeId)) {
+      error = visited.has(nodeId) ? 'Rooms cannot be revisited.' : 'Unknown room record.';
+      break;
+    }
+    if (index > 0) {
+      const edge = roomEdgeForMove(mapId, route[index - 1], nodeId);
+      if (!edge) {
+        error = 'No recovered passage connects those rooms in that direction.';
+        break;
+      }
+      if (edge.door) {
+        if (!inventory.has(edge.door)) {
+          error = `${edge.door.toUpperCase()} DOOR is locked. Its matching key has not been collected.`;
+          break;
+        }
+        inventory.delete(edge.door);
+        consumedDoors.push(edge.door);
+      }
+    }
+    visited.add(nodeId);
+    if (node.item) inventory.add(node.item);
+  }
+
+  return {
+    valid: !error,
+    error,
+    inventory: [...inventory],
+    consumedDoors,
+    visited: [...visited],
+    current: route[route.length - 1]
+  };
+}
+
+function roomMoveStatus(mapId, route, nextNodeId) {
+  const current = route[route.length - 1];
+  if (route.includes(nextNodeId)) {
+    return { ok: false, message: 'Rooms cannot be revisited.' };
+  }
+  const edge = roomEdgeForMove(mapId, current, nextNodeId);
+  if (!edge) {
+    const reverseOnly = roomMap(mapId).edges.some((item) => !item.twoWay && item.from === nextNodeId && item.to === current);
+    return {
+      ok: false,
+      message: reverseOnly ? 'That passage is one-way in the opposite direction.' : 'No recovered passage connects those rooms.'
+    };
+  }
+  const simulation = simulateRoomRoute(mapId, route);
+  if (edge.door && !simulation.inventory.includes(edge.door)) {
+    return { ok: false, message: `${edge.door.toUpperCase()} DOOR is locked. Find its matching key first.` };
+  }
+  const nextRoute = [...route, nextNodeId];
+  if (nextNodeId === 'X' && !nextRoute.includes('C')) {
+    return { ok: false, message: 'A valid escape route must visit central room C.' };
+  }
+  return { ok: true, message: 'Passage accepted.' };
+}
+
+function roomRouteIsSolved(mapId, route) {
+  return mapId === ROOM_INTENDED_MAP
+    && route.length === ROOM_INTENDED_ROUTE.length
+    && ROOM_INTENDED_ROUTE.every((nodeId, index) => route[index] === nodeId)
+    && simulateRoomRoute(mapId, route).valid;
+}
+
+function roomSolutionRoutes(mapId) {
+  const solutions = [];
+  const visit = (route) => {
+    const current = route[route.length - 1];
+    if (current === 'X') {
+      if (route.includes('C') && simulateRoomRoute(mapId, route).valid) solutions.push(route);
+      return;
+    }
+    for (const node of roomMap(mapId).nodes) {
+      if (roomMoveStatus(mapId, route, node.id).ok) visit([...route, node.id]);
+    }
+  };
+  visit(['S']);
+  return solutions;
+}
+
+function roomSolvedMarkup(room) {
+  const route = room.routes[ROOM_INTENDED_MAP];
+  const letterTiles = route.map((nodeId, index) => {
+    const node = roomMap(ROOM_INTENDED_MAP).nodes.find((item) => item.id === nodeId);
+    return `<span style="--delay:${index}"><small>${esc(nodeId)}</small><strong>${esc(node.reveal)}</strong></span>`;
+  }).join('');
+  return `
+    <section class="room-complete-state">
+      <div class="room-complete-route">
+        <div class="eyebrow">ESCAPE ROUTE // VERIFIED</div>
+        <h2>FIRST ESCAPE RECORD RESTORED</h2>
+        <div class="room-letter-route">${letterTiles}</div>
+        <div class="verified-path">${route.map(esc).join(' → ')}</div>
+      </div>
+      <div class="room-complete-copy">
+        <div class="restore-mark">✓</div>
+        <p>The valid route resolves the next evidence source outside the walk-in closet.</p>
+        <div class="next-source"><span>NEXT EVIDENCE SOURCE</span><strong>${esc(ROOM_REVEAL)}</strong></div>
+        <small>Proceed to the primary bedroom.</small>
+        <button id="room-continue" class="primary">Continue to Origin</button>
+      </div>
+    </section>`;
+}
+
+function roomMarkup(chapter) {
+  const room = state.chapterState.room;
+  if (room.solved) return roomSolvedMarkup(room);
+
+  const mapId = room.selectedMap;
+  const map = roomMap(mapId);
+  const route = room.routes[mapId];
+  const simulation = simulateRoomRoute(mapId, route);
+  const hintCount = state.hintsUsed.room || 0;
+  const hints = chapter.hints.slice(0, hintCount).map((hint, index) => `
+    <p class="hint-line"><strong>H${index + 1}</strong><span>${esc(hint)}</span></p>`).join('');
+  const edgeLines = map.edges.map((edge) => {
+    const from = map.nodes.find((node) => node.id === edge.from);
+    const to = map.nodes.find((node) => node.id === edge.to);
+    return `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"></line>`;
+  }).join('');
+  const nodes = map.nodes.map((node) => {
+    const visitedIndex = route.indexOf(node.id);
+    const current = simulation.current === node.id;
+    return `
+      <button class="room-node ${visitedIndex >= 0 ? 'visited' : ''} ${current ? 'current' : ''}" style="--x:${node.x}%;--y:${node.y}%;" data-room-node="${node.id}" aria-label="Room ${node.id}${current ? ', current' : visitedIndex >= 0 ? ', visited' : ''}">
+        <span>${esc(node.id)}</span>${visitedIndex >= 0 ? `<small>${visitedIndex + 1}</small>` : ''}
+      </button>`;
+  }).join('');
+  const inventory = simulation.inventory.length
+    ? simulation.inventory.map((key) => `<span class="key-chip ${key}">${key.toUpperCase()} KEY</span>`).join('')
+    : '<span class="inventory-empty">No keys held</span>';
+  const consumed = simulation.consumedDoors.length
+    ? simulation.consumedDoors.map((door) => `<span>${door.toUpperCase()} DOOR OPENED</span>`).join('')
+    : '<span>No doors opened</span>';
+
+  return `
+    <section class="room-workspace">
+      <aside class="room-panel room-evidence">
+        <div class="eyebrow">RECORD 03 // FIRST ESCAPE</div>
+        <h2>The Room</h2>
+        <div class="evidence-block"><span>PHYSICAL EVIDENCE</span><strong>MAPS A / B / C</strong><small>Keys, doors, and one-way arrows remain on paper.</small></div>
+        <div class="room-rules"><span>ROUTE PROTOCOL</span><p>Reach X, visit C, obey one-way passages, use matching keys, and never revisit a room.</p></div>
+        <div class="court-hints">
+          <div class="hint-header"><span>ASSISTANCE</span><button id="hint-button" class="ghost" ${hintCount >= 3 ? 'disabled' : ''}>Hint ${Math.min(hintCount + 1, 3)} / 3</button></div>
+          ${hints}
+        </div>
+      </aside>
+      <div class="room-panel room-map-panel">
+        <div class="panel-heading">
+          <div><span>DIGITAL ROUTE ENGINE</span><strong>SELECT A CONNECTED ROOM</strong></div>
+          <div class="room-map-actions"><button id="room-undo" class="ghost" ${route.length <= 1 ? 'disabled' : ''}>Undo</button><button id="room-reset" class="ghost" ${route.length <= 1 ? 'disabled' : ''}>Reset Map</button></div>
+        </div>
+        <div class="map-tabs" role="tablist">${Object.keys(ROOM_MAPS).map((id) => `<button class="${id === mapId ? 'active' : ''}" data-room-map="${id}" role="tab" aria-selected="${id === mapId}">Map ${id}</button>`).join('')}</div>
+        <div class="room-map-canvas" aria-label="Digital route map ${esc(mapId)}">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${edgeLines}</svg>
+          ${nodes}
+        </div>
+        <div class="route-tape"><span>ACTIVE ROUTE</span><strong>${route.map(esc).join(' → ')}</strong></div>
+      </div>
+      <aside class="room-panel room-status-panel">
+        <div class="inventory-block"><span>INVENTORY</span><div>${inventory}</div></div>
+        <div class="door-log"><span>ACCESS LOG</span><div>${consumed}</div></div>
+        <div class="puzzle-feedback ${roomFeedbackMessage ? 'contradiction' : 'incomplete'}" aria-live="polite">
+          <strong>${esc(roomFeedbackMessage || 'Route active. Consult the physical map.')}</strong>
+          <span>Current room: ${esc(simulation.current)}</span>
+        </div>
+      </aside>
+    </section>`;
+}
+
 function adminMarkup() {
   if (!adminOpen) return '';
   const current = chapterById(state.currentChapter);
@@ -684,8 +912,11 @@ function adminMarkup() {
   const hintsUsed = Object.values(state.hintsUsed).reduce((total, count) => total + count, 0);
   const court = state.chapterState.court;
   const table = state.chapterState.table;
+  const room = state.chapterState.room;
   const assignmentSummary = COURT_SHOTS.map((shot) => `${shot.label}:${court.landingAssignments[shot.id] || '—'}`).join(' · ');
   const tableSummary = table.arrangement.map((id) => id ? tableObject(id).label : '—').join(' → ');
+  const roomRoute = room.routes[room.selectedMap].join(' → ');
+  const roomInventory = simulateRoomRoute(room.selectedMap, room.routes[room.selectedMap]).inventory.join(', ') || 'None';
   return `
     <div class="modal-backdrop">
       <section class="admin-panel">
@@ -702,6 +933,8 @@ function adminMarkup() {
           <button id="admin-reset-court">Reset Court</button>
           <button id="admin-solve-table">Solve Table</button>
           <button id="admin-reset-table">Reset Table</button>
+          <button id="admin-solve-room">Solve Room</button>
+          <button id="admin-reset-room">Reset Room</button>
         </div>
         <form id="admin-boot-entry" class="admin-recovery-form">
           <label>Manual Boot recovery<input id="admin-subject-input" autocomplete="off" placeholder="ENTER SUBJECT" /></label>
@@ -715,6 +948,11 @@ function adminMarkup() {
         <details class="admin-inspector">
           <summary>Inspect Table state</summary>
           <p><strong>CLOCKWISE</strong> ${esc(tableSummary)}</p>
+        </details>
+        <details class="admin-inspector">
+          <summary>Inspect Room state</summary>
+          <p><strong>MAP</strong> ${esc(room.selectedMap)} · <strong>ROUTE</strong> ${esc(roomRoute)}</p>
+          <p><strong>INVENTORY</strong> ${esc(roomInventory)}</p>
         </details>
         <div class="admin-grid">
           ${CHAPTERS.map((chapter) => `<button data-jump="${chapter.id}">Jump to ${chapter.id}</button>`).join('')}
@@ -733,10 +971,12 @@ function appMarkup() {
     ? courtMarkup(chapter)
     : chapter.id === 'table'
       ? tableMarkup(chapter)
+      : chapter.id === 'room'
+        ? roomMarkup(chapter)
       : chapter.id === 'final'
         ? finalMarkup()
         : chapterMarkup(chapter);
-  const interactiveStage = ['court', 'table'].includes(chapter.id) ? `${chapter.id}-stage` : '';
+  const interactiveStage = ['court', 'table', 'room'].includes(chapter.id) ? `${chapter.id}-stage` : '';
   return `
     <div class="app-shell">
       <header class="topbar">
@@ -933,6 +1173,98 @@ function resetTableAdmin() {
   });
 }
 
+function selectRoomMap(mapId) {
+  if (!ROOM_MAPS[mapId] || state.chapterState.room.solved) return;
+  roomFeedbackMessage = '';
+  saveState({
+    ...state,
+    chapterState: { ...state.chapterState, room: createRoomState({ ...state.chapterState.room, selectedMap: mapId }) }
+  });
+}
+
+function moveRoomNode(nodeId) {
+  const room = state.chapterState.room;
+  if (room.solved) return;
+  const route = room.routes[room.selectedMap];
+  const move = roomMoveStatus(room.selectedMap, route, nodeId);
+  if (!move.ok) {
+    roomFeedbackMessage = move.message;
+    render();
+    return;
+  }
+  const nextRoute = [...route, nodeId];
+  const solved = roomRouteIsSolved(room.selectedMap, nextRoute);
+  const routes = { ...room.routes, [room.selectedMap]: nextRoute };
+  const completed = solved && !state.completed.includes('room') ? [...state.completed, 'room'] : state.completed;
+  roomFeedbackMessage = '';
+  if (solved) playTone('ok');
+  saveState({
+    ...state,
+    completed,
+    chapterState: { ...state.chapterState, room: createRoomState({ ...room, routes, solved }) }
+  });
+}
+
+function undoRoomMove() {
+  const room = state.chapterState.room;
+  const route = room.routes[room.selectedMap];
+  if (room.solved || route.length <= 1) return;
+  roomFeedbackMessage = '';
+  saveState({
+    ...state,
+    chapterState: {
+      ...state.chapterState,
+      room: createRoomState({ ...room, routes: { ...room.routes, [room.selectedMap]: route.slice(0, -1) } })
+    }
+  });
+}
+
+function resetCurrentRoomMap() {
+  const room = state.chapterState.room;
+  if (room.solved) return;
+  roomFeedbackMessage = '';
+  saveState({
+    ...state,
+    chapterState: {
+      ...state.chapterState,
+      room: createRoomState({ ...room, routes: { ...room.routes, [room.selectedMap]: ['S'] } })
+    }
+  });
+}
+
+function solveRoomAdmin() {
+  const completed = [...new Set(['boot', 'court', 'table', ...state.completed, 'room'])];
+  roomFeedbackMessage = '';
+  saveState({
+    ...state,
+    authenticated: true,
+    currentChapter: 'room',
+    completed,
+    chapterState: {
+      ...state.chapterState,
+      room: createRoomState({
+        selectedMap: ROOM_INTENDED_MAP,
+        routes: { ...createRoomState().routes, [ROOM_INTENDED_MAP]: [...ROOM_INTENDED_ROUTE] },
+        solved: true
+      })
+    }
+  });
+}
+
+function resetRoomAdmin() {
+  const hintsUsed = { ...state.hintsUsed };
+  delete hintsUsed.room;
+  roomFeedbackMessage = '';
+  saveState({
+    ...state,
+    authenticated: true,
+    currentChapter: 'room',
+    completed: state.completed.filter((id) => id !== 'room'),
+    hintsUsed,
+    chapterState: { ...state.chapterState, room: createRoomState() }
+  });
+}
+
 function courtHasProgress() {
   const court = state.chapterState.court;
   return court.shotOrder.some(Boolean)
@@ -943,6 +1275,11 @@ function courtHasProgress() {
 function tableHasProgress() {
   const table = state.chapterState.table;
   return table.arrangement.slice(1).some(Boolean) || Boolean(state.hintsUsed.table);
+}
+
+function roomHasProgress() {
+  const room = state.chapterState.room;
+  return Object.values(room.routes).some((route) => route.length > 1) || Boolean(state.hintsUsed.room);
 }
 
 function bindEvents() {
@@ -1125,6 +1462,22 @@ function bindEvents() {
   const tableContinue = document.getElementById('table-continue');
   if (tableContinue) tableContinue.addEventListener('click', () => saveState({ ...state, currentChapter: 'room' }));
 
+  document.querySelectorAll('[data-room-map]').forEach((button) => button.addEventListener('click', () => selectRoomMap(button.dataset.roomMap)));
+  document.querySelectorAll('[data-room-node]').forEach((button) => button.addEventListener('click', () => moveRoomNode(button.dataset.roomNode)));
+
+  const roomUndo = document.getElementById('room-undo');
+  if (roomUndo) roomUndo.addEventListener('click', undoRoomMove);
+
+  const roomReset = document.getElementById('room-reset');
+  if (roomReset) roomReset.addEventListener('click', () => {
+    if (state.chapterState.room.routes[state.chapterState.room.selectedMap].length > 1
+      && !window.confirm('Reset the current map route?')) return;
+    resetCurrentRoomMap();
+  });
+
+  const roomContinue = document.getElementById('room-continue');
+  if (roomContinue) roomContinue.addEventListener('click', () => saveState({ ...state, currentChapter: 'origin' }));
+
   const soundButton = document.getElementById('sound-button');
   if (soundButton) soundButton.addEventListener('click', () => saveState({ ...state, soundOn: !state.soundOn }));
 
@@ -1176,6 +1529,12 @@ function bindEvents() {
 
   const adminResetTable = document.getElementById('admin-reset-table');
   if (adminResetTable) adminResetTable.addEventListener('click', resetTableAdmin);
+
+  const adminSolveRoom = document.getElementById('admin-solve-room');
+  if (adminSolveRoom) adminSolveRoom.addEventListener('click', solveRoomAdmin);
+
+  const adminResetRoom = document.getElementById('admin-reset-room');
+  if (adminResetRoom) adminResetRoom.addEventListener('click', resetRoomAdmin);
 
   const adminBootEntry = document.getElementById('admin-boot-entry');
   if (adminBootEntry) adminBootEntry.addEventListener('submit', (event) => {

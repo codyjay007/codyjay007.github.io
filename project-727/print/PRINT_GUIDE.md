@@ -30,10 +30,18 @@ The card backs load coordinates from `shared/game-config.js`, the same source us
 - Choose one real kitchen drawer during setup and place one triangle marker where it is visible after the Table solve.
 - Put the sealed Room packet inside that marked drawer.
 
+## Room
+
+- Print `room/maps.html` single-sided; it produces one US Letter page each for Maps A, B, and C.
+- Keep all maps at 100% scale so arrows, door labels, and key labels remain readable.
+- Optional: print `room/optional-overlay.svg` on transparency film. It is atmospheric only and contains no critical evidence.
+- Test the packet in the primary bedroom walk-in closet under event lighting.
+
 ## Event-day print check
 
 - Measure one poker card after printing; it must be 2.5 × 3.5 inches.
 - Confirm every front has the expected back.
 - Compare all seven card-back coordinates with the operator answer sheet before sealing the packet.
 - Confirm the selected kitchen drawer opens freely and contains only the intended Room packet.
+- Confirm red/blue keys, matching doors, and one-way arrowheads are readable on all three Room maps.
 - Keep one backup Court packet with the operator materials.
