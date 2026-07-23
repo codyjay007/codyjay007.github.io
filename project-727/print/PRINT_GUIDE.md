@@ -37,6 +37,21 @@ The card backs load coordinates from `shared/game-config.js`, the same source us
 - Optional: print `room/optional-overlay.svg` on transparency film. It is atmospheric only and contains no critical evidence.
 - Test the packet in the primary bedroom walk-in closet under event lighting.
 
+## Origin
+
+- Print `origin/record-cards.html` on cardstock and cut the four cards.
+- Optional: replace each card’s photo placeholder with a local image before the final print; no answer depends on a photo.
+- Print `origin/timeline-board.html` on cardstock or mount it to a rigid backing.
+- Print and cut `origin/evidence-tokens.html`.
+- Rehearse placing the four cards from earliest to latest and verify each fragment is visible through its window.
+
+## Finale
+
+- Print `finale/birthday-record.html` on ivory or champagne stock. Place it before the gift box so the birthday framing is immediately visible.
+- Add a recent local photo if available.
+- Print `finale/archive-update-card.html` for the strawberry-cake epilogue after dinner.
+- Do not print or handwrite the final lock digits on either player-facing card.
+
 ## Event-day print check
 
 - Measure one poker card after printing; it must be 2.5 × 3.5 inches.
@@ -44,4 +59,6 @@ The card backs load coordinates from `shared/game-config.js`, the same source us
 - Compare all seven card-back coordinates with the operator answer sheet before sealing the packet.
 - Confirm the selected kitchen drawer opens freely and contains only the intended Room packet.
 - Confirm red/blue keys, matching doors, and one-way arrowheads are readable on all three Room maps.
+- Confirm the physical timeline yields the intended MMDD lock value without any digital screen displaying it.
+- Confirm the birthday card is encountered before the Bvlgari box.
 - Keep one backup Court packet with the operator materials.

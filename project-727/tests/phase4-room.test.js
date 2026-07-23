@@ -80,7 +80,7 @@ const v5State = {
   }
 };
 const migrated = run(`migrateState(${JSON.stringify(v5State)})`);
-assert.equal(migrated.stateVersion, 6);
+assert.equal(migrated.stateVersion, 7);
 assert.equal(migrated.currentChapter, 'room');
 assert.deepEqual([...migrated.chapterState.room.routes.A], ['S']);
 

@@ -1,8 +1,8 @@
 'use strict';
 
-const STORAGE_KEY = 'project-727-state-v6';
-const PREVIOUS_STORAGE_KEYS = ['project-727-state-v5', 'project-727-state-v4', 'project-727-state-v3', 'project-727-state-v2', 'project-570-state-v1'];
-const STATE_VERSION = 6;
+const STORAGE_KEY = 'project-727-state-v7';
+const PREVIOUS_STORAGE_KEYS = ['project-727-state-v6', 'project-727-state-v5', 'project-727-state-v4', 'project-727-state-v3', 'project-727-state-v2', 'project-570-state-v1'];
+const STATE_VERSION = 7;
 
 if (!globalThis.PROJECT727_CONFIG) {
   throw new Error('Project 727 shared configuration failed to load.');
@@ -24,6 +24,11 @@ const ROOM_MAPS = PROJECT727_CONFIG.room.maps;
 const ROOM_INTENDED_MAP = PROJECT727_CONFIG.room.intendedMap;
 const ROOM_INTENDED_ROUTE = PROJECT727_CONFIG.room.intendedRoute;
 const ROOM_REVEAL = PROJECT727_CONFIG.room.reveal;
+const ORIGIN_RECORDS = PROJECT727_CONFIG.origin.records;
+const ORIGIN_TOKENS = PROJECT727_CONFIG.origin.tokens;
+const ORIGIN_TARGETS = PROJECT727_CONFIG.origin.targets;
+const ORIGIN_RECORD_ORDER = PROJECT727_CONFIG.origin.recordOrder;
+const ORIGIN_CANONICAL_DATE = PROJECT727_CONFIG.origin.canonicalDate;
 
 const CHAPTERS = [
   {
@@ -89,9 +94,9 @@ const CHAPTERS = [
     label: 'Record 04 — The Origin',
     subtitle: 'Status Change // Activation',
     zone: 'Primary Bedroom',
-    objective: 'Place all recovered records on the timeline and restore the activation date.',
-    prompt: 'Enter the activation date in YYYY/MM/DD format.',
-    answers: ['2025/01/28', '2025-01-28'],
+    objective: 'Order the recovered records, link their evidence, then verify the physical activation date.',
+    prompt: '',
+    answers: [],
     hints: [
       'The meeting, date, and escape are earlier records. The activation event comes after them.',
       'Align the four record cards by time and inspect the windows in the timeline sleeve.',
@@ -149,6 +154,18 @@ function createRoomState(overrides = {}) {
   };
 }
 
+function createOriginState(overrides = {}) {
+  return {
+    recordOrder: Array(4).fill(null),
+    selectedRecord: null,
+    tokenLinks: {},
+    selectedToken: null,
+    dateConfirmed: false,
+    solved: false,
+    ...overrides
+  };
+}
+
 function createDefaultState() {
   return {
     authenticated: false,
@@ -161,7 +178,8 @@ function createDefaultState() {
       boot: createBootState(),
       court: createCourtState(),
       table: createTableState(),
-      room: createRoomState()
+      room: createRoomState(),
+      origin: createOriginState()
     }
   };
 }
@@ -172,8 +190,10 @@ let feedback = '';
 let restoredOverlay = null;
 let draggedShotId = null;
 let draggedTableObjectId = null;
+let draggedOriginRecordId = null;
 let bootTransitionPending = false;
 let roomFeedbackMessage = '';
+let originDateFeedback = '';
 
 function sanitizeShotOrder(order) {
   const validIds = new Set(COURT_SHOTS.map((shot) => shot.id));
@@ -217,6 +237,28 @@ function sanitizeRoomRoutes(routes) {
   }));
 }
 
+function sanitizeOriginRecordOrder(order) {
+  const validIds = new Set(ORIGIN_RECORDS.map((record) => record.id));
+  const seen = new Set();
+  return Array.from({ length: 4 }, (_, index) => {
+    const value = Array.isArray(order) ? order[index] : null;
+    if (!validIds.has(value) || seen.has(value)) return null;
+    seen.add(value);
+    return value;
+  });
+}
+
+function sanitizeOriginTokenLinks(links) {
+  const validTokens = new Set(ORIGIN_TOKENS.map((token) => token.id));
+  const validTargets = new Set(ORIGIN_TARGETS.map((target) => target.id));
+  const usedTargets = new Set();
+  return Object.fromEntries(Object.entries(links || {}).filter(([tokenId, targetId]) => {
+    if (!validTokens.has(tokenId) || !validTargets.has(targetId) || usedTargets.has(targetId)) return false;
+    usedTargets.add(targetId);
+    return true;
+  }));
+}
+
 function migrateState(raw) {
   if (!raw || typeof raw !== 'object') return createDefaultState();
 
@@ -229,10 +271,12 @@ function migrateState(raw) {
   const oldCourt = raw.chapterState?.court || {};
   const oldTable = raw.chapterState?.table || {};
   const oldRoom = raw.chapterState?.room || {};
+  const oldOrigin = raw.chapterState?.origin || {};
   const bootSolved = Boolean(oldBoot.solved || wasAuthenticated || completed.includes('boot'));
   const courtSolved = Boolean(oldCourt.solved || completed.includes('court'));
   const tableSolved = Boolean(oldTable.solved || completed.includes('table'));
   const roomSolved = Boolean(oldRoom.solved || completed.includes('room'));
+  const originSolved = Boolean(oldOrigin.solved || completed.includes('origin'));
 
   if (bootSolved && !completed.includes('boot')) completed.unshift('boot');
 
@@ -272,6 +316,16 @@ function migrateState(raw) {
           ? { ...createRoomState().routes, [ROOM_INTENDED_MAP]: [...ROOM_INTENDED_ROUTE] }
           : sanitizeRoomRoutes(oldRoom.routes),
         solved: roomSolved
+      }),
+      origin: createOriginState({
+        recordOrder: originSolved ? [...ORIGIN_RECORD_ORDER] : sanitizeOriginRecordOrder(oldOrigin.recordOrder),
+        selectedRecord: ORIGIN_RECORDS.some((record) => record.id === oldOrigin.selectedRecord) ? oldOrigin.selectedRecord : null,
+        tokenLinks: originSolved
+          ? Object.fromEntries(ORIGIN_TOKENS.map((token) => [token.id, token.target]))
+          : sanitizeOriginTokenLinks(oldOrigin.tokenLinks),
+        selectedToken: ORIGIN_TOKENS.some((token) => token.id === oldOrigin.selectedToken) ? oldOrigin.selectedToken : null,
+        dateConfirmed: originSolved || Boolean(oldOrigin.dateConfirmed),
+        solved: originSolved
       })
     }
   };
@@ -401,17 +455,17 @@ function finalMarkup() {
     <section class="chapter-card final-card panel-glow">
       <div class="archive-seal">727</div>
       <div class="eyebrow">ARCHIVE RESTORED</div>
-      <h2>Birthday record detected.</h2>
+      <h2>Birthday record ready.</h2>
       <div class="final-metrics">
-        <div><span>SUBJECT</span><strong>TINA</strong></div>
-        <div><span>ACTIVATED</span><strong>2025 / 01 / 28</strong></div>
-        <div><span>ELAPSED</span><strong>545 DAYS</strong></div>
+        <div><span>IDENTITY</span><strong>VERIFIED</strong></div>
+        <div><span>RECORDS</span><strong>04 RESTORED</strong></div>
+        <div><span>ACTIVATION DATE</span><strong>VERIFIED</strong></div>
       </div>
       <div class="vault-instruction">
-        <span>FINAL ARCHIVE LOCATION</span><strong>GUEST BEDROOM // PRIMARY DISPLAY</strong>
+        <span>FINAL ARCHIVE</span><strong>GUEST BEDROOM</strong>
         <span>ACCESS FORMAT</span><strong>MMDD</strong>
       </div>
-      <p class="final-copy">This memory does not need to be solved. It only needs to be kept.</p>
+      <p class="final-copy">The birthday vault is now available. Use the verified activation date in the displayed access format.</p>
       <div class="birthday-line">HAPPY BIRTHDAY, TINA.</div>
     </section>`;
 }
@@ -905,6 +959,116 @@ function roomMarkup(chapter) {
     </section>`;
 }
 
+function originRecord(id) {
+  return ORIGIN_RECORDS.find((record) => record.id === id);
+}
+
+function originToken(id) {
+  return ORIGIN_TOKENS.find((token) => token.id === id);
+}
+
+function originOrderIsCorrect(order) {
+  return ORIGIN_RECORD_ORDER.every((id, index) => order[index] === id);
+}
+
+function originLinksAreCorrect(links) {
+  return ORIGIN_TOKENS.every((token) => links[token.id] === token.target);
+}
+
+function originReconstructionReady(origin) {
+  return originOrderIsCorrect(origin.recordOrder) && originLinksAreCorrect(origin.tokenLinks);
+}
+
+function originFeedback(origin) {
+  const filledRecords = origin.recordOrder.filter(Boolean).length;
+  if (filledRecords === 4 && !originOrderIsCorrect(origin.recordOrder)) {
+    return { type: 'contradiction', message: 'The four records are not in chronological order.' };
+  }
+  const incorrectLink = Object.entries(origin.tokenLinks).some(([tokenId, targetId]) => originToken(tokenId)?.target !== targetId);
+  if (incorrectLink) {
+    return { type: 'contradiction', message: 'One evidence token conflicts with its linked archive record.' };
+  }
+  if (originReconstructionReady(origin)) {
+    return { type: 'restored', message: 'DIGITAL RECONSTRUCTION COMPLETE' };
+  }
+  return { type: 'incomplete', message: `Timeline ${filledRecords} / 4 · Evidence links ${Object.keys(origin.tokenLinks).length} / 4` };
+}
+
+function originMarkup(chapter) {
+  const origin = state.chapterState.origin;
+  const status = originFeedback(origin);
+  const ready = originReconstructionReady(origin);
+  const hintCount = state.hintsUsed.origin || 0;
+  const hints = chapter.hints.slice(0, hintCount).map((hint, index) => `
+    <p class="hint-line"><strong>H${index + 1}</strong><span>${esc(hint)}</span></p>`).join('');
+  const placed = new Set(origin.recordOrder.filter(Boolean));
+  const recordBank = ORIGIN_RECORDS.filter((record) => !placed.has(record.id)).map((record) => `
+    <button class="origin-record-token ${origin.selectedRecord === record.id ? 'selected' : ''}" draggable="true" data-origin-record="${record.id}">
+      <span>${esc(record.archive)}</span><strong>${esc(record.label)}</strong>
+    </button>`).join('');
+  const timelineSlots = origin.recordOrder.map((recordId, index) => {
+    const record = originRecord(recordId);
+    return `
+      <div class="origin-slot ${recordId ? 'filled' : ''}" data-origin-slot="${index}" role="button" tabindex="0" aria-label="Timeline position ${index + 1}${record ? `, ${record.label}` : ', empty'}">
+        <span class="slot-number">0${index + 1}</span>
+        ${record ? `<button class="origin-record-token placed ${origin.selectedRecord === record.id ? 'selected' : ''}" draggable="true" data-origin-record="${record.id}"><span>${esc(record.archive)}</span><strong>${esc(record.label)}</strong></button><button class="remove-origin-record" data-remove-origin-record="${record.id}" aria-label="Remove ${esc(record.label)}">×</button>` : '<span class="origin-slot-empty">PLACE RECORD</span>'}
+      </div>`;
+  }).join('');
+  const unlinkedTokens = ORIGIN_TOKENS.filter((token) => !origin.tokenLinks[token.id]).map((token) => `
+    <button class="evidence-token ${origin.selectedToken === token.id ? 'selected' : ''}" data-origin-token="${token.id}">
+      <span>${esc(token.symbol)}</span><strong>${esc(token.label)}</strong>
+    </button>`).join('');
+  const targetCards = ORIGIN_TARGETS.map((target) => {
+    const tokenEntry = Object.entries(origin.tokenLinks).find(([, targetId]) => targetId === target.id);
+    const token = tokenEntry ? originToken(tokenEntry[0]) : null;
+    return `
+      <button class="evidence-target ${token ? 'linked' : ''}" data-origin-target="${target.id}" aria-label="Evidence target ${target.label}${token ? `, linked to ${token.label}` : ''}">
+        <span>${esc(target.label)}</span>
+        ${token ? `<strong>${esc(token.symbol)} ${esc(token.label)}</strong><small data-unlink-origin-token="${token.id}">REMOVE</small>` : '<strong>LINK TOKEN</strong>'}
+      </button>`;
+  }).join('');
+
+  return `
+    <section class="origin-workspace">
+      <aside class="origin-panel origin-evidence">
+        <div class="eyebrow">RECORD 04 // STATUS CHANGE</div>
+        <h2>The Origin</h2>
+        <div class="evidence-block"><span>PHYSICAL EVIDENCE</span><strong>4 RECORD CARDS</strong><small>Timeline sleeve and four evidence tokens</small></div>
+        <div class="court-hints">
+          <div class="hint-header"><span>ASSISTANCE</span><button id="hint-button" class="ghost" ${hintCount >= 3 ? 'disabled' : ''}>Hint ${Math.min(hintCount + 1, 3)} / 3</button></div>
+          ${hints}
+        </div>
+      </aside>
+      <div class="origin-panel origin-build-panel">
+        <div class="origin-layer">
+          <div class="panel-heading"><div><span>LAYER 1 // CHRONOLOGY</span><strong>DRAG OR CLICK TO ORDER</strong></div><button id="origin-reset" class="ghost">Reset Origin</button></div>
+          <div class="origin-record-bank">${recordBank || '<span class="bank-empty">All records placed.</span>'}</div>
+          <div class="origin-timeline">${timelineSlots}</div>
+        </div>
+        <div class="origin-layer token-layer">
+          <div class="panel-heading"><div><span>LAYER 2 // EVIDENCE LINKS</span><strong>SELECT A TOKEN, THEN AN ARCHIVE</strong></div></div>
+          <div class="origin-link-grid">
+            <div class="evidence-token-bank">${unlinkedTokens || '<span class="bank-empty">All evidence tokens linked.</span>'}</div>
+            <div class="evidence-targets">${targetCards}</div>
+          </div>
+        </div>
+      </div>
+      <aside class="origin-panel origin-status-panel">
+        <div class="origin-layer-status"><span>CHRONOLOGY</span><strong>${originOrderIsCorrect(origin.recordOrder) ? 'VERIFIED' : `${origin.recordOrder.filter(Boolean).length} / 4`}</strong></div>
+        <div class="origin-layer-status"><span>EVIDENCE LINKS</span><strong>${originLinksAreCorrect(origin.tokenLinks) ? 'VERIFIED' : `${Object.keys(origin.tokenLinks).length} / 4`}</strong></div>
+        <div class="puzzle-feedback ${status.type}" aria-live="polite"><strong>${esc(status.message)}</strong><span>${ready ? 'Read the activation date from the physical timeline.' : 'Complete both reconstruction layers.'}</span></div>
+        ${ready ? `
+          <form id="origin-date-form" class="origin-date-form">
+            <div class="eyebrow">FINAL DATE VERIFICATION</div>
+            <p>The digital windows are open. Read the physical timeline and enter the full activation date.</p>
+            <label>YYYY/MM/DD<input id="origin-date-input" autocomplete="off" inputmode="numeric" placeholder="YYYY/MM/DD" /></label>
+            <button type="submit" class="primary">Verify activation date</button>
+            <div class="status-message ${originDateFeedback ? 'error' : ''}">${esc(originDateFeedback || 'Awaiting physical record.')}</div>
+          </form>` : ''}
+      </aside>
+    </section>`;
+}
+
 function adminMarkup() {
   if (!adminOpen) return '';
   const current = chapterById(state.currentChapter);
@@ -913,10 +1077,13 @@ function adminMarkup() {
   const court = state.chapterState.court;
   const table = state.chapterState.table;
   const room = state.chapterState.room;
+  const origin = state.chapterState.origin;
   const assignmentSummary = COURT_SHOTS.map((shot) => `${shot.label}:${court.landingAssignments[shot.id] || '—'}`).join(' · ');
   const tableSummary = table.arrangement.map((id) => id ? tableObject(id).label : '—').join(' → ');
   const roomRoute = room.routes[room.selectedMap].join(' → ');
   const roomInventory = simulateRoomRoute(room.selectedMap, room.routes[room.selectedMap]).inventory.join(', ') || 'None';
+  const originOrderSummary = origin.recordOrder.map((id) => id ? originRecord(id).label : '—').join(' → ');
+  const originLinksSummary = ORIGIN_TOKENS.map((token) => `${token.label}:${origin.tokenLinks[token.id] || '—'}`).join(' · ');
   return `
     <div class="modal-backdrop">
       <section class="admin-panel">
@@ -935,6 +1102,9 @@ function adminMarkup() {
           <button id="admin-reset-table">Reset Table</button>
           <button id="admin-solve-room">Solve Room</button>
           <button id="admin-reset-room">Reset Room</button>
+          <button id="admin-solve-origin">Solve Origin Layers</button>
+          <button id="admin-reset-origin">Reset Origin</button>
+          <button id="admin-bypass-date">Bypass Date</button>
         </div>
         <form id="admin-boot-entry" class="admin-recovery-form">
           <label>Manual Boot recovery<input id="admin-subject-input" autocomplete="off" placeholder="ENTER SUBJECT" /></label>
@@ -953,6 +1123,12 @@ function adminMarkup() {
           <summary>Inspect Room state</summary>
           <p><strong>MAP</strong> ${esc(room.selectedMap)} · <strong>ROUTE</strong> ${esc(roomRoute)}</p>
           <p><strong>INVENTORY</strong> ${esc(roomInventory)}</p>
+        </details>
+        <details class="admin-inspector">
+          <summary>Inspect Origin state</summary>
+          <p><strong>ORDER</strong> ${esc(originOrderSummary)}</p>
+          <p><strong>LINKS</strong> ${esc(originLinksSummary)}</p>
+          <p><strong>DATE</strong> ${origin.dateConfirmed ? 'Confirmed' : 'Pending'}</p>
         </details>
         <div class="admin-grid">
           ${CHAPTERS.map((chapter) => `<button data-jump="${chapter.id}">Jump to ${chapter.id}</button>`).join('')}
@@ -973,10 +1149,12 @@ function appMarkup() {
       ? tableMarkup(chapter)
       : chapter.id === 'room'
         ? roomMarkup(chapter)
+        : chapter.id === 'origin'
+          ? originMarkup(chapter)
       : chapter.id === 'final'
         ? finalMarkup()
         : chapterMarkup(chapter);
-  const interactiveStage = ['court', 'table', 'room'].includes(chapter.id) ? `${chapter.id}-stage` : '';
+  const interactiveStage = ['court', 'table', 'room', 'origin'].includes(chapter.id) ? `${chapter.id}-stage` : '';
   return `
     <div class="app-shell">
       <header class="topbar">
@@ -1265,6 +1443,124 @@ function resetRoomAdmin() {
   });
 }
 
+function placeOriginRecord(recordId, targetIndex) {
+  const origin = state.chapterState.origin;
+  if (origin.solved) return;
+  const recordOrder = [...origin.recordOrder];
+  const sourceIndex = recordOrder.indexOf(recordId);
+  const displaced = recordOrder[targetIndex];
+  if (sourceIndex >= 0) recordOrder[sourceIndex] = displaced || null;
+  recordOrder[targetIndex] = recordId;
+  originDateFeedback = '';
+  saveState({
+    ...state,
+    chapterState: { ...state.chapterState, origin: createOriginState({ ...origin, recordOrder, selectedRecord: recordId }) }
+  });
+}
+
+function removeOriginRecord(recordId) {
+  const origin = state.chapterState.origin;
+  if (origin.solved) return;
+  originDateFeedback = '';
+  saveState({
+    ...state,
+    chapterState: {
+      ...state.chapterState,
+      origin: createOriginState({
+        ...origin,
+        recordOrder: origin.recordOrder.map((id) => id === recordId ? null : id),
+        selectedRecord: null
+      })
+    }
+  });
+}
+
+function assignOriginToken(targetId) {
+  const origin = state.chapterState.origin;
+  const tokenId = origin.selectedToken;
+  if (!tokenId || origin.solved) return;
+  const tokenLinks = Object.fromEntries(Object.entries(origin.tokenLinks).filter(([existingToken, existingTarget]) =>
+    existingToken !== tokenId && existingTarget !== targetId
+  ));
+  tokenLinks[tokenId] = targetId;
+  originDateFeedback = '';
+  saveState({
+    ...state,
+    chapterState: {
+      ...state.chapterState,
+      origin: createOriginState({ ...origin, tokenLinks, selectedToken: null })
+    }
+  });
+}
+
+function unlinkOriginToken(tokenId) {
+  const origin = state.chapterState.origin;
+  if (origin.solved) return;
+  const tokenLinks = { ...origin.tokenLinks };
+  delete tokenLinks[tokenId];
+  originDateFeedback = '';
+  saveState({
+    ...state,
+    chapterState: { ...state.chapterState, origin: createOriginState({ ...origin, tokenLinks, selectedToken: tokenId }) }
+  });
+}
+
+function solveOriginLayersAdmin() {
+  const completed = [...new Set(['boot', 'court', 'table', 'room', ...state.completed])];
+  originDateFeedback = '';
+  saveState({
+    ...state,
+    authenticated: true,
+    currentChapter: 'origin',
+    completed,
+    chapterState: {
+      ...state.chapterState,
+      origin: createOriginState({
+        recordOrder: [...ORIGIN_RECORD_ORDER],
+        selectedRecord: null,
+        tokenLinks: Object.fromEntries(ORIGIN_TOKENS.map((token) => [token.id, token.target])),
+        selectedToken: null,
+        dateConfirmed: false,
+        solved: false
+      })
+    }
+  });
+}
+
+function bypassOriginDateAdmin() {
+  const completed = [...new Set(['boot', 'court', 'table', 'room', ...state.completed, 'origin'])];
+  originDateFeedback = '';
+  saveState({
+    ...state,
+    authenticated: true,
+    currentChapter: 'final',
+    completed,
+    chapterState: {
+      ...state.chapterState,
+      origin: createOriginState({
+        recordOrder: [...ORIGIN_RECORD_ORDER],
+        tokenLinks: Object.fromEntries(ORIGIN_TOKENS.map((token) => [token.id, token.target])),
+        dateConfirmed: true,
+        solved: true
+      })
+    }
+  });
+}
+
+function resetOriginAdmin() {
+  const hintsUsed = { ...state.hintsUsed };
+  delete hintsUsed.origin;
+  originDateFeedback = '';
+  saveState({
+    ...state,
+    authenticated: true,
+    currentChapter: 'origin',
+    completed: state.completed.filter((id) => id !== 'origin'),
+    hintsUsed,
+    chapterState: { ...state.chapterState, origin: createOriginState() }
+  });
+}
+
 function courtHasProgress() {
   const court = state.chapterState.court;
   return court.shotOrder.some(Boolean)
@@ -1280,6 +1576,11 @@ function tableHasProgress() {
 function roomHasProgress() {
   const room = state.chapterState.room;
   return Object.values(room.routes).some((route) => route.length > 1) || Boolean(state.hintsUsed.room);
+}
+
+function originHasProgress() {
+  const origin = state.chapterState.origin;
+  return origin.recordOrder.some(Boolean) || Object.keys(origin.tokenLinks).length > 0 || Boolean(state.hintsUsed.origin);
 }
 
 function bindEvents() {
@@ -1478,6 +1779,105 @@ function bindEvents() {
   const roomContinue = document.getElementById('room-continue');
   if (roomContinue) roomContinue.addEventListener('click', () => saveState({ ...state, currentChapter: 'origin' }));
 
+  document.querySelectorAll('[data-origin-record]').forEach((token) => {
+    token.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const origin = state.chapterState.origin;
+      if (origin.solved) return;
+      saveState({
+        ...state,
+        chapterState: {
+          ...state.chapterState,
+          origin: createOriginState({ ...origin, selectedRecord: token.dataset.originRecord })
+        }
+      });
+    });
+    token.addEventListener('dragstart', (event) => {
+      draggedOriginRecordId = token.dataset.originRecord;
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', draggedOriginRecordId);
+    });
+    token.addEventListener('dragend', () => { draggedOriginRecordId = null; });
+  });
+
+  document.querySelectorAll('[data-origin-slot]').forEach((slot) => {
+    const targetIndex = Number(slot.dataset.originSlot);
+    const placeSelected = () => {
+      const selected = state.chapterState.origin.selectedRecord;
+      if (selected) placeOriginRecord(selected, targetIndex);
+    };
+    slot.addEventListener('click', placeSelected);
+    slot.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        placeSelected();
+      }
+    });
+    slot.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+    });
+    slot.addEventListener('drop', (event) => {
+      event.preventDefault();
+      const recordId = event.dataTransfer.getData('text/plain') || draggedOriginRecordId;
+      if (recordId) placeOriginRecord(recordId, targetIndex);
+      draggedOriginRecordId = null;
+    });
+  });
+
+  document.querySelectorAll('[data-remove-origin-record]').forEach((button) => button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    removeOriginRecord(button.dataset.removeOriginRecord);
+  }));
+
+  document.querySelectorAll('[data-origin-token]').forEach((button) => button.addEventListener('click', () => {
+    const origin = state.chapterState.origin;
+    saveState({
+      ...state,
+      chapterState: {
+        ...state.chapterState,
+        origin: createOriginState({ ...origin, selectedToken: button.dataset.originToken })
+      }
+    });
+  }));
+
+  document.querySelectorAll('[data-origin-target]').forEach((button) => button.addEventListener('click', () => assignOriginToken(button.dataset.originTarget)));
+  document.querySelectorAll('[data-unlink-origin-token]').forEach((control) => control.addEventListener('click', (event) => {
+    event.stopPropagation();
+    unlinkOriginToken(control.dataset.unlinkOriginToken);
+  }));
+
+  const originReset = document.getElementById('origin-reset');
+  if (originReset) originReset.addEventListener('click', () => {
+    if (originHasProgress() && !window.confirm('Reset the Origin reconstruction?')) return;
+    resetOriginAdmin();
+  });
+
+  const originDateForm = document.getElementById('origin-date-form');
+  if (originDateForm) originDateForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const entered = document.getElementById('origin-date-input').value.trim();
+    const accepted = entered === ORIGIN_CANONICAL_DATE || entered === ORIGIN_CANONICAL_DATE.replaceAll('/', '-');
+    if (!accepted) {
+      originDateFeedback = 'DATE NOT VERIFIED — RECHECK THE PHYSICAL TIMELINE';
+      playTone('error');
+      render();
+      return;
+    }
+    const completed = state.completed.includes('origin') ? state.completed : [...state.completed, 'origin'];
+    playTone('open');
+    originDateFeedback = '';
+    saveState({
+      ...state,
+      completed,
+      currentChapter: 'final',
+      chapterState: {
+        ...state.chapterState,
+        origin: createOriginState({ ...state.chapterState.origin, dateConfirmed: true, solved: true })
+      }
+    });
+  });
+
   const soundButton = document.getElementById('sound-button');
   if (soundButton) soundButton.addEventListener('click', () => saveState({ ...state, soundOn: !state.soundOn }));
 
@@ -1535,6 +1935,15 @@ function bindEvents() {
 
   const adminResetRoom = document.getElementById('admin-reset-room');
   if (adminResetRoom) adminResetRoom.addEventListener('click', resetRoomAdmin);
+
+  const adminSolveOrigin = document.getElementById('admin-solve-origin');
+  if (adminSolveOrigin) adminSolveOrigin.addEventListener('click', solveOriginLayersAdmin);
+
+  const adminResetOrigin = document.getElementById('admin-reset-origin');
+  if (adminResetOrigin) adminResetOrigin.addEventListener('click', resetOriginAdmin);
+
+  const adminBypassDate = document.getElementById('admin-bypass-date');
+  if (adminBypassDate) adminBypassDate.addEventListener('click', bypassOriginDateAdmin);
 
   const adminBootEntry = document.getElementById('admin-boot-entry');
   if (adminBootEntry) adminBootEntry.addEventListener('submit', (event) => {

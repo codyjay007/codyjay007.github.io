@@ -65,7 +65,7 @@ const legacyState = {
   soundOn: false
 };
 const migrated = run(`migrateState(${JSON.stringify(legacyState)})`);
-assert.equal(migrated.stateVersion, 6);
+assert.equal(migrated.stateVersion, 7);
 assert.equal(migrated.currentChapter, 'court');
 assert.equal(migrated.authenticated, true);
 assert.equal(migrated.chapterState.boot.solved, true);

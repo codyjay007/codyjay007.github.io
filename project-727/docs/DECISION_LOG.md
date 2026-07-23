@@ -112,3 +112,20 @@ Impact:
 - Room routes and selected map persist in state version 6.
 - Map A fails at a key-after-door condition; Map C fails because it requires revisiting C.
 - The optional overlay is noncritical and may be omitted without changing solvability.
+
+## 2026-07-22 — Origin gates the Finale through two digital layers and one physical read
+
+Decision:
+- Origin requires chronological record ordering and four evidence-token links.
+- The full-date input appears only after both digital layers are correct.
+- The player reads the date fragments from the physical timeline and confirms the full date.
+- Guest Bedroom is revealed only after that confirmation.
+
+Reason:
+- The physical timeline must remain necessary while the digital work remains meaningful.
+- Separating admin layer solve from date bypass preserves a precise event-day rescue path.
+
+Impact:
+- Origin progress and date confirmation persist in state version 7.
+- The final player screen shows `MMDD` as a format but never prints the derived four-digit value.
+- Finale assets frame the Bvlgari ring as a birthday gift, not a proposal.

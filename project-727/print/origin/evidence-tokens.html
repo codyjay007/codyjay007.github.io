@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project 727 — Evidence Tokens</title>
+  <link rel="stylesheet" href="../_print.css" />
+  <style>
+    .token-grid { min-height: 10.5in; display: grid; grid-template-columns: repeat(2, 2.5in); grid-auto-rows: 2.5in; gap: .45in; place-content: center; }
+    .token { display: grid; place-items: center; align-content: center; gap: .12in; border: 1px dashed var(--line); border-radius: 50%; background: #f8faf8; text-align: center; }
+    .token strong { color: var(--gold); font: 700 58px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .token span { color: var(--green); font: 700 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .1em; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <i class="registration tl"></i><i class="registration tr"></i><i class="registration bl"></i><i class="registration br"></i>
+    <div id="tokens" class="token-grid"></div>
+    <div class="print-meta">Origin evidence tokens // Letter // 100% scale</div>
+  </main>
+  <script src="../../shared/game-config.js"></script>
+  <script>
+    document.getElementById('tokens').innerHTML = PROJECT727_CONFIG.origin.tokens.map((token) => `
+      <div class="token"><strong>${token.symbol}</strong><span>${token.label.toUpperCase()}</span></div>`).join('');
+  </script>
+</body>
+</html>

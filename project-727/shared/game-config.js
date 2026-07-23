@@ -104,6 +104,28 @@
       intendedMap: 'B',
       intendedRoute: ['S', 'R', 'C', 'D', 'B', 'E', 'X'],
       reveal: 'BEDROOM'
+    },
+    origin: {
+      records: [
+        { id: 'contact', label: 'First Contact', archive: 'Court', fragment: '0' },
+        { id: 'date', label: 'First Date', archive: 'Table', fragment: '1' },
+        { id: 'escape', label: 'First Escape', archive: 'Room', fragment: '2' },
+        { id: 'status', label: 'Status Change', archive: 'Status Change', fragment: '8' }
+      ],
+      tokens: [
+        { id: 'shuttlecock', label: 'Shuttlecock', symbol: '◒', target: 'court' },
+        { id: 'lemon', label: 'Lemon', symbol: '●', target: 'table' },
+        { id: 'keyhole', label: 'Keyhole', symbol: '⌑', target: 'room' },
+        { id: 'linked-circles', label: 'Linked Circles', symbol: '∞', target: 'status-change' }
+      ],
+      targets: [
+        { id: 'court', label: 'Court' },
+        { id: 'table', label: 'Table' },
+        { id: 'room', label: 'Room' },
+        { id: 'status-change', label: 'Status Change' }
+      ],
+      recordOrder: ['contact', 'date', 'escape', 'status'],
+      canonicalDate: '2025/01/28'
     }
   };
 

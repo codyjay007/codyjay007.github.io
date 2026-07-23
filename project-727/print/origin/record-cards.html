@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project 727 — Origin Record Cards</title>
+  <link rel="stylesheet" href="../_print.css" />
+  <style>
+    .record-grid { width: 7.5in; height: 10.5in; display: grid; grid-template-columns: repeat(2, 3.75in); grid-template-rows: repeat(2, 5.25in); margin: 0 auto; }
+    .record-card { padding: .34in; background: #f8faf8; }
+    .record-card h2 { margin: .1in 0 .08in; color: var(--green); font-size: 27px; }
+    .record-card .archive { color: var(--gold); font: 700 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .12em; }
+    .photo-placeholder { height: 2.25in; margin: .28in 0; display: grid; place-items: center; border: 1px solid #aab7af; background: linear-gradient(145deg, #f3f6f3, #e9eeea); color: var(--muted); font: 9px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-align: center; }
+    .fragment-row { display: flex; justify-content: space-between; align-items: end; border-top: 1px solid #bdc8c1; padding-top: .18in; }
+    .fragment-row span { color: var(--muted); font: 8px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .1em; }
+    .fragment-row strong { color: var(--gold); font: 700 46px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <i class="registration tl"></i><i class="registration tr"></i><i class="registration bl"></i><i class="registration br"></i>
+    <div id="records" class="record-grid"></div>
+    <div class="print-meta">Origin record cards // Letter // 100% scale</div>
+  </main>
+  <script src="../../shared/game-config.js"></script>
+  <script>
+    document.getElementById('records').innerHTML = PROJECT727_CONFIG.origin.records.map((record, index) => `
+      <article class="record-card cut-card">
+        <div class="eyebrow">Recovered Record 0${index + 1}</div>
+        <h2>${record.label}</h2>
+        <div class="archive">${record.archive.toUpperCase()}</div>
+        <div class="photo-placeholder">OPTIONAL LOCAL PHOTO<br>OR KEEP THIS ARCHIVE PLACEHOLDER</div>
+        <div class="fragment-row"><span>TIMELINE WINDOW<br>FRAGMENT</span><strong>${record.fragment}</strong></div>
+      </article>`).join('');
+  </script>
+</body>
+</html>
