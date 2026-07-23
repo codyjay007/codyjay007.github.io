@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project 727 — Rally Rules</title>
+  <link rel="stylesheet" href="../_print.css" />
+  <style>
+    .rule-wrap { min-height: 10.5in; display: grid; place-items: center; }
+    .rule-card { width: 7in; min-height: 7.5in; padding: .55in; border: 1px dashed var(--line); background: #f8faf8; }
+    h1 { margin: .12in 0 .18in; color: var(--green); font-size: 34px; }
+    .lead { margin: 0 0 .32in; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    ol { display: grid; gap: .16in; margin: 0; padding-left: .28in; }
+    li { padding: .14in .18in; border-left: 2px solid var(--gold); background: #fff; font-size: 17px; line-height: 1.45; }
+    .procedure { margin-top: .34in; padding-top: .24in; border-top: 1px solid #bdc8c1; color: var(--green); font: 700 10px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .08em; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <i class="registration tl"></i><i class="registration tr"></i><i class="registration bl"></i><i class="registration br"></i>
+    <div class="rule-wrap">
+      <section class="rule-card">
+        <div class="eyebrow">Record 01 // Rally Reconstruction</div>
+        <h1>Recovered Rules</h1>
+        <p class="lead">Use all seven stroke cards exactly once. Reconstruct the rally on the terminal, then transfer each card’s landing coordinate to the court.</p>
+        <ol>
+          <li>Serve is first.</li>
+          <li>Smash is last.</li>
+          <li>Drop is immediately followed by Lift.</li>
+          <li>Net is immediately after Clear.</li>
+          <li>Clear is before Drop, but not adjacent to Drop.</li>
+          <li>Drive is after Lift.</li>
+        </ol>
+        <div class="procedure">ORDER THE STROKES → SELECT A PLACED STROKE → ASSIGN ITS CARD-BACK COORDINATE</div>
+      </section>
+    </div>
+    <div class="print-meta">Rally rules // Letter // 100% scale</div>
+  </main>
+</body>
+</html>

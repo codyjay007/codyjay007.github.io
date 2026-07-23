@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project 727 — Calibration Card</title>
+  <link rel="stylesheet" href="../_print.css" />
+  <style>
+    .calibration-wrap { min-height: 10.5in; display: grid; place-items: center; }
+    .calibration-card { width: 7in; height: 5in; padding: .48in; border: 1px dashed var(--line); background: linear-gradient(145deg, #f7faf7, #eef3ef); }
+    h1 { margin: .1in 0 .16in; color: var(--green); font-size: 30px; letter-spacing: -.025em; }
+    .instruction { max-width: 5.8in; margin: 0 0 .35in; color: var(--muted); font-size: 14px; line-height: 1.5; }
+    .targets { display: grid; grid-template-columns: repeat(4, 1fr); gap: .12in; }
+    .target { height: 2.2in; display: grid; grid-template-rows: auto 1fr auto; align-items: center; padding: .16in; border: 1px solid #8da397; background: #fff; text-align: center; }
+    .target span, .target small { color: var(--muted); font: 700 9px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .12em; }
+    .target strong { color: var(--gold); font: 48px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .footer-line { margin-top: .25in; padding-top: .14in; border-top: 1px solid #c3cec7; color: var(--green); font: 700 9px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .12em; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <i class="registration tl"></i><i class="registration tr"></i><i class="registration bl"></i><i class="registration br"></i>
+    <div class="calibration-wrap">
+      <section class="calibration-card">
+        <div class="eyebrow">Project 727 // Field Calibration</div>
+        <h1>Identity Pattern Reference</h1>
+        <p class="instruction">Rotate each terminal fragment until its field symbol matches the corresponding reference below. The archive validates only the complete four-fragment pattern.</p>
+        <div id="targets" class="targets" aria-label="Calibration targets"></div>
+        <div class="footer-line">MATCH F1–F4 // DO NOT REORDER</div>
+      </section>
+    </div>
+    <div class="print-meta">Calibration card // Letter // 100% scale</div>
+  </main>
+  <script src="../../shared/game-config.js"></script>
+  <script>
+    const targets = PROJECT727_CONFIG.boot.fragments.map((fragment, index) => {
+      const glyph = fragment.glyphs[fragment.correctOrientation];
+      return `<div class="target"><span>F${index + 1}</span><strong>${glyph}</strong><small>FIELD SYMBOL</small></div>`;
+    }).join('');
+    document.getElementById('targets').innerHTML = targets;
+  </script>
+</body>
+</html>

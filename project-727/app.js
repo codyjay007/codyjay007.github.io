@@ -1,48 +1,22 @@
 'use strict';
 
-const STORAGE_KEY = 'project-727-state-v3';
-const PREVIOUS_STORAGE_KEY = 'project-727-state-v2';
-const LEGACY_STORAGE_KEY = 'project-570-state-v1';
-const STATE_VERSION = 3;
+const STORAGE_KEY = 'project-727-state-v4';
+const PREVIOUS_STORAGE_KEYS = ['project-727-state-v3', 'project-727-state-v2', 'project-570-state-v1'];
+const STATE_VERSION = 4;
 
-const BOOT_FRAGMENT_CONFIG = [
-  { id: 'fragment-1', glyphs: ['⌁', '⌬', 'T', '◫'], correctOrientation: 2 },
-  { id: 'fragment-2', glyphs: ['⌖', 'I', '◇', '⌁'], correctOrientation: 1 },
-  { id: 'fragment-3', glyphs: ['△', '⌘', '◒', 'N'], correctOrientation: 3 },
-  { id: 'fragment-4', glyphs: ['○', '⌁', 'A', '⌬'], correctOrientation: 2 }
-];
+if (!globalThis.PROJECT727_CONFIG) {
+  throw new Error('Project 727 shared configuration failed to load.');
+}
 
-const COURT_SHOTS = [
-  { id: 'serve', label: 'Serve' },
-  { id: 'clear', label: 'Clear' },
-  { id: 'net', label: 'Net' },
-  { id: 'drop', label: 'Drop' },
-  { id: 'lift', label: 'Lift' },
-  { id: 'drive', label: 'Drive' },
-  { id: 'smash', label: 'Smash' }
-];
+const BOOT_FRAGMENT_CONFIG = PROJECT727_CONFIG.boot.fragments;
+const BOOT_DECODED_IDENTITY = PROJECT727_CONFIG.boot.decodedIdentity;
+const COURT_SHOTS = PROJECT727_CONFIG.court.shots;
 
 const COURT_SOLUTION_ORDER = COURT_SHOTS.map((shot) => shot.id);
 
-// Placeholder values. Replace only this object when the physical landing cards are finalized.
-const COURT_LANDING_CONFIG = {
-  serve: 'C3',
-  clear: 'A1',
-  net: 'B2',
-  drop: 'D2',
-  lift: 'A4',
-  drive: 'C2',
-  smash: 'D1'
-};
-
-const COURT_ZONES = [
-  { id: 'A1', x: 70, y: 55 }, { id: 'B1', x: 170, y: 55 }, { id: 'C1', x: 270, y: 55 }, { id: 'D1', x: 370, y: 55 },
-  { id: 'A2', x: 70, y: 145 }, { id: 'B2', x: 170, y: 145 }, { id: 'C2', x: 270, y: 145 }, { id: 'D2', x: 370, y: 145 },
-  { id: 'A3', x: 70, y: 235 }, { id: 'B3', x: 170, y: 235 }, { id: 'C3', x: 270, y: 235 }, { id: 'D3', x: 370, y: 235 },
-  { id: 'A4', x: 70, y: 325 }, { id: 'B4', x: 170, y: 325 }, { id: 'C4', x: 270, y: 325 }, { id: 'D4', x: 370, y: 325 }
-];
-
-const COURT_REVEAL = 'KITCHEN';
+const COURT_LANDING_CONFIG = Object.fromEntries(COURT_SHOTS.map((shot) => [shot.id, shot.coordinate]));
+const COURT_ZONES = PROJECT727_CONFIG.court.zones;
+const COURT_REVEAL = PROJECT727_CONFIG.court.reveal;
 
 const CHAPTERS = [
   {
@@ -110,7 +84,7 @@ const CHAPTERS = [
     zone: 'Primary Bedroom',
     objective: 'Place all recovered records on the timeline and restore the activation date.',
     prompt: 'Enter the activation date in YYYY/MM/DD format.',
-    answers: ['2025/01/28', '2025-01-28', '20250128', '01282025'],
+    answers: ['2025/01/28', '2025-01-28'],
     hints: [
       'The meeting, date, and escape are earlier records. The activation event comes after them.',
       'Align the four record cards by time and inspect the windows in the timeline sleeve.',
@@ -236,9 +210,8 @@ function migrateState(raw) {
 function loadState() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    const previous = localStorage.getItem(PREVIOUS_STORAGE_KEY);
-    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
-    const parsed = JSON.parse(stored || previous || legacy || 'null');
+    const previous = PREVIOUS_STORAGE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
+    const parsed = JSON.parse(stored || previous || 'null');
     const migrated = migrateState(parsed);
     if (!stored && parsed) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
     return migrated;
@@ -310,17 +283,17 @@ function bootIsSolved(orientations) {
 
 function bootMarkup() {
   const boot = state.chapterState.boot;
+  const solved = bootIsSolved(boot.fragmentOrientations);
   const fragments = BOOT_FRAGMENT_CONFIG.map((fragment, index) => {
     const orientation = boot.fragmentOrientations[index];
-    const correct = orientation === fragment.correctOrientation;
     const connector = index < BOOT_FRAGMENT_CONFIG.length - 1
-      ? `<span class="boot-connector ${correct && boot.fragmentOrientations[index + 1] === BOOT_FRAGMENT_CONFIG[index + 1].correctOrientation ? 'connected' : ''}" aria-hidden="true"></span>`
+      ? '<span class="boot-connector" aria-hidden="true"></span>'
       : '';
     return `
-      <button class="boot-fragment ${correct ? 'edge-aligned' : ''}" data-boot-fragment="${index}" aria-label="Rotate archive fragment ${index + 1}">
+      <button class="boot-fragment ${solved ? 'decoded' : ''}" data-boot-fragment="${index}" aria-label="Rotate archive fragment ${index + 1}" ${solved ? 'disabled' : ''}>
         <span class="fragment-index">F${index + 1}</span>
-        <span class="fragment-glyph">${esc(fragment.glyphs[orientation])}</span>
-        <span class="fragment-action">ROTATE</span>
+        <span class="fragment-glyph">${esc(solved ? BOOT_DECODED_IDENTITY[index] : fragment.glyphs[orientation])}</span>
+        <span class="fragment-action">${solved ? 'DECODED' : 'ROTATE'}</span>
       </button>${connector}`;
   }).join('');
 
@@ -332,9 +305,9 @@ function bootMarkup() {
         <h1>PROJECT <span>727</span></h1>
         <p class="boot-lead">A personal archive contains four incomplete records. Use the physical calibration card to align the recovered identity fragments.</p>
         <div class="boot-fragments" aria-label="Archive identity fragments">${fragments}</div>
-        <div class="puzzle-feedback ${bootIsSolved(boot.fragmentOrientations) ? 'restored' : 'incomplete'}" aria-live="polite">
-          <strong>${bootIsSolved(boot.fragmentOrientations) ? 'IDENTITY PATTERN RESTORED' : 'IDENTITY PATTERN INCOMPLETE'}</strong>
-          <span>${bootIsSolved(boot.fragmentOrientations) ? 'Opening archive…' : 'Aligned edges will illuminate. Continue calibration.'}</span>
+        <div class="puzzle-feedback ${solved ? 'restored' : 'incomplete'}" aria-live="polite">
+          <strong>${solved ? 'IDENTITY PATTERN RESTORED' : 'IDENTITY PATTERN INCOMPLETE'}</strong>
+          <span>${solved ? 'Identity decoded. Opening archive…' : 'Match all four field symbols to the physical calibration card. Partial states are not validated.'}</span>
         </div>
       </section>
       ${adminMarkup()}
@@ -494,8 +467,33 @@ function courtMarkup(chapter) {
       <span>${index + 1}. ${esc(shotLabel(shotId))}</span><strong>${esc(court.landingAssignments[shotId] || '—')}</strong>
     </div>`).join('');
 
+  if (court.solved) {
+    return `
+      <section class="court-complete-state">
+        <div class="court-complete-copy">
+          <div class="restore-mark">✓</div>
+          <div class="eyebrow">RALLY RECONSTRUCTED</div>
+          <h2>FIRST CONTACT RECORD RESTORED</h2>
+          <p>The recovered trajectory has resolved the next archive source.</p>
+          <div class="next-source"><span>NEXT EVIDENCE SOURCE</span><strong>KITCHEN</strong></div>
+          <button id="court-continue" class="primary">Continue to Table</button>
+        </div>
+        <div class="court-complete-visual">
+          <div class="panel-heading"><div><span>VERIFIED TRAJECTORY</span><strong>SEVEN LANDING RECORDS</strong></div></div>
+          <svg class="badminton-court completed-court" viewBox="0 0 440 380" aria-label="Completed badminton trajectory">
+            <rect class="court-boundary" x="20" y="15" width="400" height="350"></rect>
+            <line class="court-line" x1="220" y1="15" x2="220" y2="365"></line>
+            <line class="court-line net" x1="20" y1="190" x2="420" y2="190"></line>
+            ${zones}
+            <g class="trajectory">${trajectoryMarkup(court)}</g>
+          </svg>
+          <div class="completion-sequence">${court.shotOrder.map((shotId, index) => `<span><b>${index + 1}</b>${esc(shotLabel(shotId))}<strong>${esc(court.landingAssignments[shotId])}</strong></span>`).join('')}</div>
+        </div>
+      </section>`;
+  }
+
   return `
-    <section class="court-workspace ${court.solved ? 'solved' : ''}">
+    <section class="court-workspace">
       <aside class="court-panel evidence-panel">
         <div class="eyebrow">RECORD 01 // FIRST CONTACT</div>
         <h2>The Court</h2>
@@ -526,16 +524,6 @@ function courtMarkup(chapter) {
         <div class="puzzle-feedback ${status.type}" aria-live="polite"><strong>${esc(status.message)}</strong><span>${court.selectedShot ? `${esc(shotLabel(court.selectedShot))} selected.` : 'Select a stroke to continue reconstruction.'}</span></div>
       </aside>
 
-      ${court.solved ? `
-        <div class="court-complete-overlay">
-          <div class="restore-mark">✓</div>
-          <div class="completion-copy">
-            <div class="eyebrow">RALLY RECONSTRUCTED</div>
-            <h3>FIRST CONTACT RECORD RESTORED</h3>
-            <p>NEXT EVIDENCE SOURCE: <strong>KITCHEN</strong></p>
-          </div>
-          <button id="court-continue" class="primary">Continue to Table</button>
-        </div>` : ''}
     </section>`;
 }
 
@@ -727,6 +715,13 @@ function resetCourtAdmin() {
   });
 }
 
+function courtHasProgress() {
+  const court = state.chapterState.court;
+  return court.shotOrder.some(Boolean)
+    || Object.keys(court.landingAssignments).length > 0
+    || Boolean(state.hintsUsed.court);
+}
+
 function bindEvents() {
   document.querySelectorAll('[data-boot-fragment]').forEach((button) => button.addEventListener('click', () => updateBootFragment(Number(button.dataset.bootFragment))));
 
@@ -841,7 +836,7 @@ function bindEvents() {
 
   const courtReset = document.getElementById('court-reset');
   if (courtReset) courtReset.addEventListener('click', () => {
-    if (!window.confirm('Reset the Court reconstruction?')) return;
+    if (courtHasProgress() && !window.confirm('Reset the Court reconstruction?')) return;
     resetCourtAdmin();
   });
 
@@ -910,8 +905,7 @@ function bindEvents() {
   if (reset) reset.addEventListener('click', () => {
     if (!window.confirm('Reset all game progress? This cannot be undone.')) return;
     localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(PREVIOUS_STORAGE_KEY);
-    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    PREVIOUS_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
     state = createDefaultState();
     feedback = '';
     render();
